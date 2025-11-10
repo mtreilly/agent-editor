@@ -21,7 +21,11 @@ function DocPage() {
   const [related, setRelated] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
   const navigate = useNavigate()
 
-  const editorApiRef = React.useRef<{ insertAnchor: (id?: string) => { id: string; line: number } | null } | null>(null)
+  const editorApiRef = React.useRef<{
+    insertAnchor: (id?: string) => { id: string; line: number } | null
+    jumpToAnchor?: (id: string) => boolean
+    anchorLinkFor?: (anchorId: string) => string
+  } | null>(null)
 
   React.useEffect(() => {
     (async () => {
@@ -51,6 +55,20 @@ function DocPage() {
     container.addEventListener('wiki:navigate', handler as EventListener)
     return () => container.removeEventListener('wiki:navigate', handler as EventListener)
   }, [navigate])
+
+  // If ?anchor= is present in URL, jump to it once editor is ready
+  React.useEffect(() => {
+    const qp = new URLSearchParams(window.location.search)
+    const anc = qp.get('anchor')
+    if (!anc) return
+    const id = anc
+    const iv = setInterval(() => {
+      if (editorApiRef.current?.jumpToAnchor?.(id)) {
+        clearInterval(iv)
+      }
+    }, 100)
+    return () => clearInterval(iv)
+  }, [id])
 
   async function save() {
     if (!doc) return
