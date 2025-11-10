@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test('home loads and nav exists', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByText('agent-editor')).toBeVisible()
+  await expect(page.getByRole('banner').getByRole('heading', { name: 'agent-editor' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Search' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Repos' })).toBeVisible()
 })
@@ -26,7 +26,7 @@ test('graph path tool renders', async ({ page }) => {
 
 test('doc page renders panels (without Tauri)', async ({ page }) => {
   await page.goto('/doc/dummy')
-  await expect(page.getByRole('heading', { name: 'doc/dummy' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'dummy' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Backlinks' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Neighbors' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Related' })).toBeVisible()

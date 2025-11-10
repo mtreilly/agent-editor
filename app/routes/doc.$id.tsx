@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
-import { Editor } from '../features/editor/Editor'
+const EditorLazy = React.lazy(() => import('../features/editor/Editor').then(m => ({ default: m.Editor })))
 
 export const Route = createFileRoute('/doc/$id')({
   component: DocPage,
@@ -83,7 +83,9 @@ function DocPage() {
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">{doc.title || doc.slug}</h1>
       <div className="border rounded p-2" id="editor-container">
-        <Editor value={body} onChange={setBody} docId={doc.id} onReady={(api) => (editorApiRef.current = api)} />
+        <React.Suspense fallback={<div className="text-sm text-gray-600">Loading editor…</div>}>
+          <EditorLazy value={body} onChange={setBody} docId={doc.id} onReady={(api) => (editorApiRef.current = api)} />
+        </React.Suspense>
       </div>
       <div>
         <button className="px-3 py-2 bg-black text-white rounded" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
