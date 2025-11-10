@@ -12,5 +12,9 @@ pub fn open_db(path: &std::path::Path) -> Result<Db, Box<dyn std::error::Error>>
     conn.pragma_update(None, "foreign_keys", &true)?;
     // DDL
     conn.execute_batch(include_str!("../schema.sql"))?;
+    // Ensure app-controlled FTS updates: drop any leftover triggers that try to sync body from blobs
+    let _ = conn.execute("DROP TRIGGER IF EXISTS doc_version_ai", []);
+    let _ = conn.execute("DROP TRIGGER IF EXISTS doc_ai", []);
+    let _ = conn.execute("DROP TRIGGER IF EXISTS doc_au", []);
     Ok(Db(Mutex::new(conn)))
 }

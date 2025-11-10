@@ -173,17 +173,34 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             let conn = db.0.lock();
             let lim = p.limit.unwrap_or(50);
             let off = p.offset.unwrap_or(0);
-            let sql = String::from("SELECT d.id, d.slug, bm25(doc_fts, 1.2, 0.75) as rank, snippet(doc_fts,1,'<b>','</b>','…',8) as title_snip, snippet(doc_fts,2,'<b>','</b>','…',8) as body_snip FROM doc_fts JOIN doc d ON d.rowid=doc_fts.rowid WHERE doc_fts MATCH ?1 AND (?2 IS NULL OR d.repo_id=?2) ORDER BY rank ASC, d.updated_at DESC LIMIT ?3 OFFSET ?4");
-            let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+            let primary = String::from("SELECT d.id, d.slug, bm25(doc_fts, 1.2, 0.75) as rank, snippet(doc_fts,1,'<b>','</b>','…',8) as title_snip, snippet(doc_fts,2,'<b>','</b>','…',8) as body_snip FROM doc_fts JOIN doc d ON d.rowid=doc_fts.rowid WHERE doc_fts MATCH ?1 AND (?2 IS NULL OR d.repo_id=?2) ORDER BY rank ASC, d.updated_at DESC LIMIT ?3 OFFSET ?4");
             let mut out = Vec::new();
-            let rows = stmt.query_map(params![p.query, p.repo_id, lim, off], |r| Ok(serde_json::json!({
-                "id": r.get::<_, String>(0)?,
-                "slug": r.get::<_, String>(1)?,
-                "rank": r.get::<_, f64>(2).unwrap_or(0.0),
-                "title_snip": r.get::<_, String>(3).unwrap_or_default(),
-                "body_snip": r.get::<_, String>(4).unwrap_or_default()
-            }))).map_err(|e| e.to_string())?;
-            for r in rows { out.push(r.map_err(|e| e.to_string())?) }
+            let mut tried_primary = false;
+            let mut primary_ok = false;
+            if let Ok(mut stmt) = conn.prepare(&primary) {
+                tried_primary = true;
+                let rows = stmt.query_map(params![p.query, p.repo_id, lim, off], |r| Ok(serde_json::json!({
+                    "id": r.get::<_, String>(0)?,
+                    "slug": r.get::<_, String>(1)?,
+                    "rank": r.get::<_, f64>(2).unwrap_or(0.0),
+                    "title_snip": r.get::<_, String>(3).unwrap_or_default(),
+                    "body_snip": r.get::<_, String>(4).unwrap_or_default()
+                })));
+                if let Ok(rs) = rows {
+                    let mut ok = true;
+                    for r in rs { if let Ok(v) = r { out.push(v) } else { ok = false; break; } }
+                    primary_ok = ok;
+                }
+            }
+            if !primary_ok {
+                // Fallback without bm25/snippet to avoid env-specific FTS aux function issues
+                let simple = String::from("SELECT d.id, d.slug, 0.0 as rank, '' as title_snip, '' as body_snip FROM doc_fts JOIN doc d ON d.rowid=doc_fts.rowid WHERE doc_fts MATCH ?1 AND (?2 IS NULL OR d.repo_id=?2) ORDER BY d.updated_at DESC LIMIT ?3 OFFSET ?4");
+                let mut stmt2 = conn.prepare(&simple).map_err(|e| e.to_string())?;
+                let rows2 = stmt2.query_map(params![p.query, p.repo_id, lim, off], |r| Ok(serde_json::json!({
+                    "id": r.get::<_, String>(0)?, "slug": r.get::<_, String>(1)?, "rank": r.get::<_, f64>(2).unwrap_or(0.0), "title_snip": r.get::<_, String>(3).unwrap_or_default(), "body_snip": r.get::<_, String>(4).unwrap_or_default()
+                }))).map_err(|e| e.to_string())?;
+                for r in rows2 { out.push(r.map_err(|e| e.to_string())?) }
+            }
             Ok(serde_json::json!(out))
         }
         "graph_backlinks" => {
