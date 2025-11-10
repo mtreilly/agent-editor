@@ -27,9 +27,30 @@ func aiCmd() *cobra.Command {
     run.Flags().String("anchor", "", "Anchor ID (optional)")
 
     providers := &cobra.Command{Use: "providers", Short: "Manage AI providers"}
-    providersList := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return output.Print("not implemented", "text") }}
-    providersEnable := &cobra.Command{Use: "enable <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return output.Print("not implemented", "text") }}
-    providersDisable := &cobra.Command{Use: "disable <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return output.Print("not implemented", "text") }}
+    providersList := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load()
+        cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background()
+        var res []map[string]interface{}
+        if err := cli.Call(ctx, "ai_providers_list", map[string]interface{}{}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+    providersEnable := &cobra.Command{Use: "enable <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load()
+        cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background()
+        var res map[string]interface{}
+        if err := cli.Call(ctx, "ai_providers_enable", map[string]interface{}{"name": args[0]}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+    providersDisable := &cobra.Command{Use: "disable <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load()
+        cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background()
+        var res map[string]interface{}
+        if err := cli.Call(ctx, "ai_providers_disable", map[string]interface{}{"name": args[0]}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}}
     providers.AddCommand(providersList, providersEnable, providersDisable)
 
     traces := &cobra.Command{Use: "traces", Short: "AI traces"}

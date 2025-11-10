@@ -79,3 +79,8 @@ export const anchorsList = (doc_id: string) =>
 
 export const anchorsDelete = (anchor_id: string) =>
   safeInvoke<{ deleted: boolean }>('anchors_delete', { anchorId: anchor_id })
+
+export type Provider = { name: string; kind: 'local' | 'remote'; enabled: boolean }
+export const aiProvidersList = () => safeInvoke<Provider[]>('ai_providers_list')
+export const aiProvidersEnable = (name: string) => safeInvoke<{ updated: boolean }>('ai_providers_enable', { name })
+export const aiProvidersDisable = (name: string) => safeInvoke<{ updated: boolean }>('ai_providers_disable', { name })

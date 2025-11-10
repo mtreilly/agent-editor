@@ -360,6 +360,34 @@ fn parse_anchor_line(anchor_id: &str) -> Option<usize> {
     } else { None }
 }
 
+// -------- AI Providers ---------
+#[derive(Serialize)]
+pub struct ProviderRow { pub name: String, pub kind: String, pub enabled: bool }
+
+#[tauri::command]
+pub async fn ai_providers_list(db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<ProviderRow>, String> {
+    let conn = db.0.lock();
+    let mut stmt = conn.prepare("SELECT name, kind, enabled FROM provider ORDER BY name ASC").map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |r| Ok(ProviderRow { name: r.get(0)?, kind: r.get(1)?, enabled: r.get::<_, i64>(2)? != 0 })).map_err(|e| e.to_string())?;
+    let mut out = Vec::new();
+    for r in rows { out.push(r.map_err(|e| e.to_string())?) }
+    Ok(out)
+}
+
+#[tauri::command]
+pub async fn ai_providers_enable(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let n = conn.execute("UPDATE provider SET enabled=1, updated_at=datetime('now') WHERE name=?1", params![name]).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"updated": n>0}))
+}
+
+#[tauri::command]
+pub async fn ai_providers_disable(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let n = conn.execute("UPDATE provider SET enabled=0, updated_at=datetime('now') WHERE name=?1", params![name]).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"updated": n>0}))
+}
+
 fn extract_context(body: &str, line: usize, n: usize) -> String {
     let lines: Vec<&str> = body.lines().collect();
     if lines.is_empty() { return String::new(); }

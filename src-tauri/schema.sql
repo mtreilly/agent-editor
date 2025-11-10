@@ -126,3 +126,13 @@ CREATE VIRTUAL TABLE IF NOT EXISTS doc_fts USING fts5(
   title, body, slug, repo_id, content='doc', content_rowid='rowid',
   tokenize='unicode61 remove_diacritics 2'
 );
+
+-- AI Providers registry (privacy: network off by default)
+CREATE TABLE IF NOT EXISTS provider (
+  name TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('local','remote')),
+  enabled INTEGER NOT NULL DEFAULT 0,
+  config JSON,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

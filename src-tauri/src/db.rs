@@ -12,9 +12,29 @@ pub fn open_db(path: &std::path::Path) -> Result<Db, Box<dyn std::error::Error>>
     conn.pragma_update(None, "foreign_keys", &true)?;
     // DDL
     conn.execute_batch(include_str!("../schema.sql"))?;
+    // Seed providers (privacy defaults)
+    seed_providers(&mut conn)?;
     // Ensure app-controlled FTS updates: drop any leftover triggers that try to sync body from blobs
     let _ = conn.execute("DROP TRIGGER IF EXISTS doc_version_ai", []);
     let _ = conn.execute("DROP TRIGGER IF EXISTS doc_ai", []);
     let _ = conn.execute("DROP TRIGGER IF EXISTS doc_au", []);
     Ok(Db(Mutex::new(conn)))
+}
+
+fn seed_providers(conn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
+    // Insert defaults if missing
+    let providers = vec![
+        ("local", "local", 1),
+        ("codex", "remote", 0),
+        ("claude-code", "remote", 0),
+        ("openrouter", "remote", 0),
+        ("opencode", "remote", 0),
+    ];
+    for (name, kind, enabled) in providers {
+        conn.execute(
+            "INSERT INTO provider(name,kind,enabled,config) VALUES(?,?,?,json('{}')) ON CONFLICT(name) DO NOTHING",
+            rusqlite::params![name, kind, enabled],
+        )?;
+    }
+    Ok(())
 }
