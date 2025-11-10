@@ -21,6 +21,7 @@ Completed
  - UI: wiki-link navigation via editor; search results link to doc
  - Search: keyboard navigation and sanitized snippets in results
  - Graph: neighbor depth control (1–3) and reactive fetch
+ - Editor: anchors panel supports Jump and Copy Link; editor API exposes jumpToAnchor and anchorLinkFor
 
 Exit criteria met
 - repo add/scan works end-to-end with JSON-RPC and CLI
