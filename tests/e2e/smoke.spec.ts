@@ -23,3 +23,11 @@ test('graph path tool renders', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Shortest Path' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Compute' })).toBeVisible()
 })
+
+test('doc page renders panels (without Tauri)', async ({ page }) => {
+  await page.goto('/doc/dummy')
+  await expect(page.getByRole('heading', { name: 'doc/dummy' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Backlinks' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Neighbors' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Related' })).toBeVisible()
+})

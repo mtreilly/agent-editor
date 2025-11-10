@@ -1,46 +1,71 @@
 import { invoke } from '@tauri-apps/api/core'
 
+function hasTauri() {
+  return typeof window !== 'undefined' && typeof (window as any).__TAURI__ !== 'undefined'
+}
+
+async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
+  if (hasTauri()) return invoke<T>(cmd, args)
+  // Browser (tests/dev web) fallbacks for UI rendering only
+  switch (cmd) {
+    case 'docs_get': {
+      const id = args?.docId
+      return { id, repo_id: '', slug: id, title: id } as any as T
+    }
+    case 'graph_backlinks':
+    case 'graph_neighbors':
+    case 'graph_related':
+      return [] as any as T
+    case 'search':
+      return [] as any as T
+    case 'anchors_upsert':
+      return { ok: true } as any as T
+    default:
+      throw new Error(`Not in Tauri environment: ${cmd}`)
+  }
+}
+
 export type SearchHit = { id: string; slug: string; title_snip: string; body_snip: string; rank: number }
 
 export const reposAdd = (path: string, name?: string, include?: string[], exclude?: string[]) =>
-  invoke<{ repo_id: string }>('repos_add', { path, name, include, exclude })
+  safeInvoke<{ repo_id: string }>('repos_add', { path, name, include, exclude })
 
-export const reposList = () => invoke<Array<{ id: string; name: string; path: string }>>('repos_list')
+export const reposList = () => safeInvoke<Array<{ id: string; name: string; path: string }>>('repos_list')
 
-export const reposInfo = (id_or_name: string) => invoke<any>('repos_info', { idOrName: id_or_name })
+export const reposInfo = (id_or_name: string) => safeInvoke<any>('repos_info', { idOrName: id_or_name })
 
-export const reposRemove = (id_or_name: string) => invoke<{ removed: boolean }>('repos_remove', { idOrName: id_or_name })
+export const reposRemove = (id_or_name: string) => safeInvoke<{ removed: boolean }>('repos_remove', { idOrName: id_or_name })
 
 export const scanRepo = (
   repoPath: string,
   filters?: { include?: string[]; exclude?: string[] },
   watch?: boolean,
   debounce?: number,
-) => invoke<{ job_id: string; files_scanned: number; docs_added: number; errors: number }>('scan_repo', { repoPath, filters, watch, debounce })
+) => safeInvoke<{ job_id: string; files_scanned: number; docs_added: number; errors: number }>('scan_repo', { repoPath, filters, watch, debounce })
 
 export const docsCreate = (repo_id: string, slug: string, title: string, body: string) =>
-  invoke<{ doc_id: string }>('docs_create', { payload: { repo_id, slug, title, body } })
+  safeInvoke<{ doc_id: string }>('docs_create', { payload: { repo_id, slug, title, body } })
 
 export const docsUpdate = (doc_id: string, body: string, message?: string) =>
-  invoke<{ version_id: string }>('docs_update', { payload: { doc_id, body, message } })
+  safeInvoke<{ version_id: string }>('docs_update', { payload: { doc_id, body, message } })
 
-export const docsGet = (doc_id: string, content?: boolean) => invoke<any>('docs_get', { docId: doc_id, content })
+export const docsGet = (doc_id: string, content?: boolean) => safeInvoke<any>('docs_get', { docId: doc_id, content })
 
-export const docsDelete = (doc_id: string) => invoke<{ deleted: boolean }>('docs_delete', { docId: doc_id })
+export const docsDelete = (doc_id: string) => safeInvoke<{ deleted: boolean }>('docs_delete', { docId: doc_id })
 
 export const search = (query: string, repo_id?: string, limit = 50, offset = 0) =>
-  invoke<SearchHit[]>('search', { repoId: repo_id, query, limit, offset })
+  safeInvoke<SearchHit[]>('search', { repoId: repo_id, query, limit, offset })
 
-export const serveApiStart = (port?: number) => invoke<void>('serve_api_start', { port })
+export const serveApiStart = (port?: number) => safeInvoke<void>('serve_api_start', { port })
 
 export type GraphDoc = { id: string; slug: string; title: string }
-export const graphBacklinks = (doc_id: string) => invoke<GraphDoc[]>('graph_backlinks', { docId: doc_id })
-export const graphNeighbors = (doc_id: string, depth = 1) => invoke<GraphDoc[]>('graph_neighbors', { docId: doc_id, depth })
-export const graphRelated = (doc_id: string) => invoke<GraphDoc[]>('graph_related', { docId: doc_id })
-export const graphPath = (start_id: string, end_id: string) => invoke<string[]>('graph_path', { startId: start_id, endId: end_id })
+export const graphBacklinks = (doc_id: string) => safeInvoke<GraphDoc[]>('graph_backlinks', { docId: doc_id })
+export const graphNeighbors = (doc_id: string, depth = 1) => safeInvoke<GraphDoc[]>('graph_neighbors', { docId: doc_id, depth })
+export const graphRelated = (doc_id: string) => safeInvoke<GraphDoc[]>('graph_related', { docId: doc_id })
+export const graphPath = (start_id: string, end_id: string) => safeInvoke<string[]>('graph_path', { startId: start_id, endId: end_id })
 
 export const aiRun = (provider: string, doc_id: string, prompt: string, anchor_id?: string) =>
-  invoke<{ trace_id: string; text: string }>('ai_run', { provider, docId: doc_id, anchorId: anchor_id, prompt })
+  safeInvoke<{ trace_id: string; text: string }>('ai_run', { provider, docId: doc_id, anchorId: anchor_id, prompt })
 
 export const anchorsUpsert = (doc_id: string, anchor_id: string, line: number) =>
-  invoke<{ ok: boolean }>('anchors_upsert', { docId: doc_id, anchorId: anchor_id, line })
+  safeInvoke<{ ok: boolean }>('anchors_upsert', { docId: doc_id, anchorId: anchor_id, line })
