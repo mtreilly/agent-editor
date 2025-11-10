@@ -104,6 +104,21 @@ fn make_slug(repo_root: &Path, file_path: &Path) -> String {
     s
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_make_slug() {
+        let root = PathBuf::from("/repo");
+        let fp = PathBuf::from("/repo/notes/Deep Topic.md");
+        let slug = make_slug(&root, &fp);
+        // relative path without extension, separators replaced with '__', spaces to '-'
+        assert_eq!(slug, "notes__Deep-Topic");
+    }
+}
+
 // Watch filesystem for changes under repo_path and rescan modified markdown files.
 pub fn watch_repo(db: std::sync::Arc<Db>, repo_path: String, include: Vec<String>, exclude: Vec<String>, debounce_ms: u64, app: tauri::AppHandle) -> Result<(), String> {
     use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};

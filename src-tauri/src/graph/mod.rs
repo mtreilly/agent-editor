@@ -71,3 +71,21 @@ fn slug_before_heading(slug: String) -> String {
     match slug.split_once('#') { Some((s, _)) => s.to_string(), None => slug }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_wikilinks_basic() {
+        let md = "Line1 [[Alpha|A]] and [[Beta]]\nNext [[Gamma#Section]] end";
+        let links = extract_wikilinks(md);
+        // Expect three links with cleaned slugs and 1-based line numbers
+        assert_eq!(links.len(), 3);
+        assert_eq!(links[0].0, "Alpha");
+        assert_eq!(links[0].1, 1);
+        assert_eq!(links[1].0, "Beta");
+        assert_eq!(links[1].1, 1);
+        assert_eq!(links[2].0, "Gamma");
+        assert_eq!(links[2].1, 2);
+    }
+}
