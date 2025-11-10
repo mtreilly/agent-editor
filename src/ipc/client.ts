@@ -39,3 +39,6 @@ export const graphNeighbors = (doc_id: string, depth = 1) => invoke<GraphDoc[]>(
 
 export const aiRun = (provider: string, doc_id: string, prompt: string, anchor_id?: string) =>
   invoke<{ trace_id: string; text: string }>('ai_run', { provider, docId: doc_id, anchorId: anchor_id, prompt })
+
+export const anchorsUpsert = (doc_id: string, anchor_id: string, line: number) =>
+  invoke<{ ok: boolean }>('anchors_upsert', { docId: doc_id, anchorId: anchor_id, line })

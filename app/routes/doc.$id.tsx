@@ -15,6 +15,8 @@ function DocPage() {
   const [prompt, setPrompt] = React.useState('Explain this section')
   const [aiOut, setAiOut] = React.useState('')
 
+  const editorApiRef = React.useRef<{ insertAnchor: (id?: string) => { id: string; line: number } | null } | null>(null)
+
   React.useEffect(() => {
     (async () => {
       const d = await api.docsGet(id, true)
@@ -41,15 +43,24 @@ function DocPage() {
     setAiOut(res.text)
   }
 
+  async function insertAnchor() {
+    if (!doc || !editorApiRef.current) return
+    const created = editorApiRef.current.insertAnchor?.()
+    if (created) {
+      await api.anchorsUpsert(doc.id, created.id, created.line)
+    }
+  }
+
   if (!doc) return <main className="p-6">Loading…</main>
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">{doc.title || doc.slug}</h1>
       <div className="border rounded p-2">
-        <Editor value={body} onChange={setBody} />
+        <Editor value={body} onChange={setBody} docId={doc.id} onReady={(api) => (editorApiRef.current = api)} />
       </div>
       <div>
         <button className="px-3 py-2 bg-black text-white rounded" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+        <button className="ml-2 px-3 py-2 border rounded" onClick={insertAnchor}>Insert Anchor</button>
       </div>
       <div className="space-y-2">
         <div className="flex gap-2">

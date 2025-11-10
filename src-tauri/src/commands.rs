@@ -322,3 +322,15 @@ fn redact(s: &str) -> String {
     out = out.replace("api_key", "****");
     out
 }
+
+#[tauri::command]
+pub async fn anchors_upsert(doc_id: String, anchor_id: String, line: i64, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let id = uuid::Uuid::new_v4().to_string();
+    let meta = serde_json::json!({"doc_id": doc_id, "line": line});
+    conn.execute(
+        "INSERT INTO provenance(id,entity_type,entity_id,source,meta) VALUES(?, 'anchor', ?, 'ui', ?)",
+        rusqlite::params![id, anchor_id, meta.to_string()],
+    ).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"ok": true}))
+}
