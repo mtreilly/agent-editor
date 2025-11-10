@@ -133,11 +133,23 @@ pub struct DocUpdate { pub doc_id: String, pub body: String, pub message: Option
 #[tauri::command]
 pub async fn docs_update(payload: DocUpdate, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let mut conn = db.0.lock();
+    let body_hash = blake3::hash(payload.body.as_bytes()).to_hex().to_string();
+    // Check if same as current
+    let unchanged: bool = conn.query_row(
+        "SELECT v.hash FROM doc d JOIN doc_version v ON v.id=d.current_version_id WHERE d.id=?1",
+        params![&payload.doc_id],
+        |r| r.get::<_, String>(0),
+    ).map(|h| h == body_hash).unwrap_or(false);
+    if unchanged {
+        let cur: String = conn.query_row("SELECT current_version_id FROM doc WHERE id=?1", params![&payload.doc_id], |r| r.get(0)).unwrap_or_default();
+        drop(conn);
+        return Ok(serde_json::json!({"version_id": cur, "skipped": true}));
+    }
     let version_id = Uuid::new_v4().to_string();
     let blob_id = Uuid::new_v4().to_string();
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     tx.execute("INSERT INTO doc_blob(id,content,size_bytes) VALUES(?,?,?)", params![blob_id, payload.body.as_bytes(), payload.body.len() as i64]).map_err(|e| e.to_string())?;
-    tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash,message) VALUES(?,?,?,?,?)", params![version_id, payload.doc_id, blob_id, version_id, payload.message.unwrap_or_default()]).map_err(|e| e.to_string())?;
+    tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash,message) VALUES(?,?,?,?,?)", params![version_id, payload.doc_id, blob_id, body_hash, payload.message.unwrap_or_default()]).map_err(|e| e.to_string())?;
     tx.execute("UPDATE doc SET current_version_id=?1, size_bytes=?2, line_count=?3, updated_at=datetime('now') WHERE id=?4",
         params![version_id, payload.body.len() as i64, payload.body.lines().count() as i64, payload.doc_id]).map_err(|e| e.to_string())?;
     // FTS update: delete+insert

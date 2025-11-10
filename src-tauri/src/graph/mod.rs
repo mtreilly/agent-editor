@@ -32,25 +32,34 @@ pub fn update_links_for_doc(conn: &Connection, doc_id: &str, content: &str) -> R
 
 fn extract_wikilinks(content: &str) -> Vec<(String, i64, i64)> {
     let mut res = Vec::new();
-    for (i, line) in content.lines().enumerate() {
-        let mut s = line;
+    let mut in_fence = false;
+    for (i, raw_line) in content.lines().enumerate() {
+        let line = raw_line.trim_end();
+        // toggle fenced code blocks (``` or ~~~)
+        if line.starts_with("```") || line.starts_with("~~~") {
+            in_fence = !in_fence;
+            continue;
+        }
+        if in_fence { continue; }
+        // strip inline code spans delimited by backticks
+        let mut cleaned = String::with_capacity(line.len());
+        let mut in_inline = false;
+        for ch in line.chars() {
+            if ch == '`' { in_inline = !in_inline; continue; }
+            if !in_inline { cleaned.push(ch); }
+        }
+        let mut s: &str = &cleaned;
         while let Some(start) = s.find("[[") {
-            if let Some(end) = s[start + 2..].find("]] ") { // spaced close unlikely; fallback below
-                let inner = &s[start + 2..start + 2 + end];
+            let rest = &s[start + 2..];
+            if let Some(end_rel) = rest.find("]]") {
+                let inner = &rest[..end_rel];
                 if let Some((slug, _alias)) = split_slug_alias(inner) {
                     let slug = slug_before_heading(slug);
-                    res.push((slug, i as i64 + 1, i as i64 + 1));
+                    if !slug.is_empty() {
+                        res.push((slug, i as i64 + 1, i as i64 + 1));
+                    }
                 }
-                s = &s[start + 2 + end + 2..];
-                continue;
-            }
-            if let Some(end2) = s[start + 2..].find("]]" ) {
-                let inner = &s[start + 2..start + 2 + end2];
-                if let Some((slug, _alias)) = split_slug_alias(inner) {
-                    let slug = slug_before_heading(slug);
-                    res.push((slug, i as i64 + 1, i as i64 + 1));
-                }
-                s = &s[start + 2 + end2 + 2..];
+                s = &rest[end_rel + 2..];
             } else {
                 break;
             }
@@ -60,10 +69,11 @@ fn extract_wikilinks(content: &str) -> Vec<(String, i64, i64)> {
 }
 
 fn split_slug_alias(inner: &str) -> Option<(String, Option<String>)> {
-    let parts: Vec<&str> = inner.split('|').collect();
-    if parts.is_empty() { return None; }
-    let slug = parts[0].trim().to_string();
-    let alias = if parts.len() > 1 { Some(parts[1].trim().to_string()) } else { None };
+    // Split only on the first '|', alias may contain additional '|'
+    let mut iter = inner.splitn(2, '|');
+    let slug = iter.next()?.trim().to_string();
+    let alias = iter.next().map(|a| a.trim().to_string());
+    if slug.is_empty() { return None; }
     Some((slug, alias))
 }
 
@@ -87,5 +97,22 @@ mod tests {
         assert_eq!(links[1].1, 1);
         assert_eq!(links[2].0, "Gamma");
         assert_eq!(links[2].1, 2);
+    }
+
+    #[test]
+    fn test_ignore_code_fences_and_inline_code() {
+        let md = "```.ignore\n[[Hidden]]\n```\ninline `[[Nope]]` text [[Yes|Alias]]";
+        let links = extract_wikilinks(md);
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].0, "Yes");
+    }
+
+    #[test]
+    fn test_alias_with_pipes_and_heading() {
+        let md = "[[Topic#H1|Ali|as with | pipes]] and [[Second]]";
+        let links = extract_wikilinks(md);
+        assert_eq!(links.len(), 2);
+        assert_eq!(links[0].0, "Topic");
+        assert_eq!(links[1].0, "Second");
     }
 }
