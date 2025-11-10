@@ -232,6 +232,27 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             let res = crate::commands::AiRunRequest { provider: p.provider, doc_id: p.doc_id, anchor_id: p.anchor_id, line: None, prompt: p.prompt };
             crate::commands::ai_run_core(&db, res)
         }
+        "anchors_list" => {
+            #[derive(Deserialize)] struct P { doc_id: String }
+            let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
+            let conn = db.0.lock();
+            let mut stmt = conn.prepare("SELECT entity_id, COALESCE(json_extract(meta,'$.line'),0), created_at FROM provenance WHERE entity_type='anchor' AND json_extract(meta,'$.doc_id')=?1 ORDER BY created_at DESC").map_err(|e| e.to_string())?;
+            let rows = stmt.query_map(params![p.doc_id], |r| Ok(serde_json::json!({
+                "id": r.get::<_, String>(0)?,
+                "line": r.get::<_, i64>(1)?,
+                "created_at": r.get::<_, String>(2)?,
+            }))).map_err(|e| e.to_string())?;
+            let mut out = Vec::new();
+            for r in rows { out.push(r.map_err(|e| e.to_string())?) }
+            Ok(serde_json::json!(out))
+        }
+        "anchors_delete" => {
+            #[derive(Deserialize)] struct P { anchor_id: String }
+            let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
+            let mut conn = db.0.lock();
+            let n = conn.execute("DELETE FROM provenance WHERE entity_type='anchor' AND entity_id=?1", params![p.anchor_id]).map_err(|e| e.to_string())?;
+            Ok(serde_json::json!({"deleted": n>0}))
+        }
         m => Err(format!("unknown method: {}", m)),
     }
 }

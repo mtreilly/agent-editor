@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
+import { AnchorsPanel } from '../features/editor/AnchorsPanel'
 const EditorLazy = React.lazy(() => import('../features/editor/Editor').then(m => ({ default: m.Editor })))
 
 export const Route = createFileRoute('/doc/$id')({
@@ -94,6 +95,7 @@ function DocPage() {
           <span className="ml-3 text-xs text-gray-600">Last anchor: {lastAnchor.id} (line {lastAnchor.line})</span>
         )}
       </div>
+      <AnchorsPanel docId={doc.id} editorApiRef={editorApiRef as any} />
       <div className="space-y-2">
         <div className="flex gap-2">
           <input className="border rounded px-3 py-2 w-full" placeholder="Prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} />

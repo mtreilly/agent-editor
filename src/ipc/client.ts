@@ -20,6 +20,10 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
       return [] as any as T
     case 'anchors_upsert':
       return { ok: true } as any as T
+    case 'anchors_list':
+      return [] as any as T
+    case 'anchors_delete':
+      return { deleted: true } as any as T
     default:
       throw new Error(`Not in Tauri environment: ${cmd}`)
   }
@@ -69,3 +73,9 @@ export const aiRun = (provider: string, doc_id: string, prompt: string, anchor_i
 
 export const anchorsUpsert = (doc_id: string, anchor_id: string, line: number) =>
   safeInvoke<{ ok: boolean }>('anchors_upsert', { docId: doc_id, anchorId: anchor_id, line })
+
+export const anchorsList = (doc_id: string) =>
+  safeInvoke<Array<{ id: string; line: number; created_at: string }>>('anchors_list', { docId: doc_id })
+
+export const anchorsDelete = (anchor_id: string) =>
+  safeInvoke<{ deleted: boolean }>('anchors_delete', { anchorId: anchor_id })

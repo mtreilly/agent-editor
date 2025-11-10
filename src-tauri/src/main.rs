@@ -37,6 +37,8 @@ fn main() {
             commands::search,
             commands::ai_run,
             commands::anchors_upsert,
+            commands::anchors_list,
+            commands::anchors_delete,
             api::serve_api_start,
         ])
         .run(ctx)
