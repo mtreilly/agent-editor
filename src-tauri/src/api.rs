@@ -206,6 +206,26 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             for r in rows { out.push(r.map_err(|e| e.to_string())?) }
             Ok(serde_json::json!(out))
         }
+        "graph_related" => {
+            #[derive(Deserialize)] struct P { doc_id: String }
+            let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
+            let conn = db.0.lock();
+            let mut stmt = conn.prepare("SELECT d2.id, d2.slug, d2.title, COUNT(*) as score FROM link l1 JOIN link l2 ON l1.to_doc_id = l2.to_doc_id JOIN doc d2 ON d2.id = l2.from_doc_id WHERE l1.from_doc_id = ?1 AND l2.from_doc_id != ?1 AND l2.from_doc_id IS NOT NULL GROUP BY d2.id ORDER BY score DESC, d2.updated_at DESC LIMIT 20").map_err(|e| e.to_string())?;
+            let rows = stmt.query_map(params![p.doc_id], |r| Ok(serde_json::json!({"id": r.get::<_, String>(0)?, "slug": r.get::<_, String>(1)?, "title": r.get::<_, String>(2)?}))).map_err(|e| e.to_string())?;
+            let mut out = Vec::new();
+            for r in rows { out.push(r.map_err(|e| e.to_string())?) }
+            Ok(serde_json::json!(out))
+        }
+        "graph_path" => {
+            #[derive(Deserialize)] struct P { start_id: String, end_id: String }
+            let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
+            let sql = "WITH RECURSIVE path(n, path) AS ( SELECT ?1, json_array(?1) UNION ALL SELECT l.to_doc_id, json_insert(path.path, '$[#]', l.to_doc_id) FROM link l JOIN path ON l.from_doc_id = path.n WHERE l.to_doc_id IS NOT NULL AND json_array_length(path.path) < 12 AND NOT EXISTS (SELECT 1 FROM json_each(path.path) WHERE value = l.to_doc_id) ) SELECT path FROM path WHERE n = ?2 LIMIT 1;";
+            let conn = db.0.lock();
+            let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+            let path_json: Option<String> = stmt.query_row(params![p.start_id, p.end_id], |r| r.get(0)).optional().map_err(|e| e.to_string())?;
+            let out = if let Some(j) = path_json { serde_json::from_str::<serde_json::Value>(&j).unwrap_or(serde_json::json!([])) } else { serde_json::json!([]) };
+            Ok(out)
+        }
         "ai_run" => {
             #[derive(Deserialize)] struct P { provider: String, doc_id: String, anchor_id: Option<String>, prompt: String }
             let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;

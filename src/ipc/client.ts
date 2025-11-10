@@ -36,6 +36,8 @@ export const serveApiStart = (port?: number) => invoke<void>('serve_api_start', 
 export type GraphDoc = { id: string; slug: string; title: string }
 export const graphBacklinks = (doc_id: string) => invoke<GraphDoc[]>('graph_backlinks', { docId: doc_id })
 export const graphNeighbors = (doc_id: string, depth = 1) => invoke<GraphDoc[]>('graph_neighbors', { docId: doc_id, depth })
+export const graphRelated = (doc_id: string) => invoke<GraphDoc[]>('graph_related', { docId: doc_id })
+export const graphPath = (start_id: string, end_id: string) => invoke<string[]>('graph_path', { startId: start_id, endId: end_id })
 
 export const aiRun = (provider: string, doc_id: string, prompt: string, anchor_id?: string) =>
   invoke<{ trace_id: string; text: string }>('ai_run', { provider, docId: doc_id, anchorId: anchor_id, prompt })

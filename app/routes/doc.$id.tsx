@@ -17,6 +17,7 @@ function DocPage() {
   const [lastAnchor, setLastAnchor] = React.useState<{ id: string; line: number } | null>(null)
   const [backlinks, setBacklinks] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
   const [neighbors, setNeighbors] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
+  const [related, setRelated] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
   const navigate = useNavigate()
 
   const editorApiRef = React.useRef<{ insertAnchor: (id?: string) => { id: string; line: number } | null } | null>(null)
@@ -30,11 +31,25 @@ function DocPage() {
       try {
         const bl = await api.graphBacklinks(id)
         const nb = await api.graphNeighbors(id, 1)
+        const rel = await api.graphRelated(id)
         setBacklinks(bl)
         setNeighbors(nb)
+        setRelated(rel)
       } catch {}
     })()
   }, [id])
+
+  React.useEffect(() => {
+    const container = document.getElementById('editor-container')
+    if (!container) return
+    const handler = (e: Event) => {
+      const any = e as any
+      const slug = any?.detail?.slug as string
+      if (slug) navigate({ to: `/doc/${slug}` })
+    }
+    container.addEventListener('wiki:navigate', handler as EventListener)
+    return () => container.removeEventListener('wiki:navigate', handler as EventListener)
+  }, [navigate])
 
   async function save() {
     if (!doc) return
@@ -67,7 +82,7 @@ function DocPage() {
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">{doc.title || doc.slug}</h1>
-      <div className="border rounded p-2">
+      <div className="border rounded p-2" id="editor-container">
         <Editor value={body} onChange={setBody} docId={doc.id} onReady={(api) => (editorApiRef.current = api)} />
       </div>
       <div>
@@ -91,7 +106,7 @@ function DocPage() {
           <pre className="border rounded p-3 whitespace-pre-wrap text-sm">{aiOut}</pre>
         )}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
         <section>
           <h2 className="font-semibold mb-2">Backlinks</h2>
           <ul className="space-y-2">
@@ -112,6 +127,17 @@ function DocPage() {
               </li>
             ))}
             {!neighbors.length && <li className="text-sm text-gray-600">None</li>}
+          </ul>
+        </section>
+        <section>
+          <h2 className="font-semibold mb-2">Related</h2>
+          <ul className="space-y-2">
+            {related.map((d) => (
+              <li key={d.id}>
+                <Link to={`/doc/${d.id}`}>{d.title || d.slug}</Link>
+              </li>
+            ))}
+            {!related.length && <li className="text-sm text-gray-600">None</li>}
           </ul>
         </section>
       </div>
