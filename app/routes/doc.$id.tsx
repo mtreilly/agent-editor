@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { createFileRoute, useParams } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
+import { Editor } from '../features/editor/Editor'
 
 export const Route = createFileRoute('/doc/$id')({
   component: DocPage,
@@ -36,11 +37,12 @@ function DocPage() {
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">{doc.title || doc.slug}</h1>
-      <textarea className="w-full h-[60vh] border rounded p-3 font-mono text-sm" value={body} onChange={(e) => setBody(e.target.value)} />
+      <div className="border rounded p-2">
+        <Editor value={body} onChange={setBody} />
+      </div>
       <div>
         <button className="px-3 py-2 bg-black text-white rounded" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
       </div>
     </main>
   )
 }
-

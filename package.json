@@ -12,6 +12,11 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@milkdown/core": "^7.17.1",
+    "@milkdown/plugin-listener": "^7.17.1",
+    "@milkdown/preset-gfm": "^7.17.1",
+    "@milkdown/react": "^7.17.1",
+    "@milkdown/utils": "^7.17.1",
     "@tanstack/react-router": "^1.135.0",
     "@tauri-apps/api": "^2.9.0",
     "react": "^19.2.0",
