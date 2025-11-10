@@ -12,7 +12,8 @@
     "tauri": "tauri",
     "dev:check": "node scripts/dev-check.mjs",
     "tauri:build": "pnpm build && pnpm tauri build",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "smoke:cli": "bash scripts/cli-smoke.sh"
   },
   "dependencies": {
     "@milkdown/core": "^7.17.1",
