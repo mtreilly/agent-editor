@@ -17,6 +17,7 @@ hyper = { version = "1", features = ["server"] }
 ignore = "0.4"
 walkdir = "2.5"
 blake3 = "1.5"
+notify = "6.1"
 
 [build-dependencies]
 tauri-build = { version = "2" }

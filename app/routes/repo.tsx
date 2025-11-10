@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
+import { listen } from '@tauri-apps/api/event'
 
 export const Route = createFileRoute('/repo')({
   component: RepoPage,
@@ -11,6 +12,7 @@ function RepoPage() {
   const [name, setName] = React.useState('')
   const [repos, setRepos] = React.useState<Array<{ id: string; name: string; path: string }>>([])
   const [loading, setLoading] = React.useState(false)
+  const [lastEvt, setLastEvt] = React.useState<string>("")
 
   const load = React.useCallback(async () => {
     setRepos(await api.reposList())
@@ -18,6 +20,10 @@ function RepoPage() {
 
   React.useEffect(() => {
     load()
+    const un = listen('progress.scan', (e) => {
+      try { setLastEvt(JSON.stringify(e.payload)) } catch { /* ignore */ }
+    })
+    return () => { un.then((x) => x()) }
   }, [load])
 
   async function add() {
@@ -59,6 +65,7 @@ function RepoPage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Repositories</h2>
+        {lastEvt ? <div className="text-xs text-gray-600">Scan: {lastEvt}</div> : null}
         <ul className="space-y-2">
           {repos.map((r) => (
             <li key={r.id} className="border rounded p-3 flex items-center justify-between">
@@ -77,4 +84,3 @@ function RepoPage() {
     </main>
   )
 }
-

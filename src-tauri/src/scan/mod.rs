@@ -1,4 +1,5 @@
 use crate::db::Db;
+use tauri::Emitter;
 use ignore::{overrides::OverrideBuilder, WalkBuilder};
 use rusqlite::{params, OptionalExtension};
 use std::{fs, path::{Path, PathBuf}};
@@ -101,4 +102,45 @@ fn make_slug(repo_root: &Path, file_path: &Path) -> String {
     s = s.replace(std::path::MAIN_SEPARATOR, "__");
     s = s.replace(' ', "-");
     s
+}
+
+// Watch filesystem for changes under repo_path and rescan modified markdown files.
+pub fn watch_repo(db: std::sync::Arc<Db>, repo_path: String, include: Vec<String>, exclude: Vec<String>, debounce_ms: u64, app: tauri::AppHandle) -> Result<(), String> {
+    use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+    use std::sync::mpsc::channel;
+    let (tx, rx) = channel();
+    let mut watcher = RecommendedWatcher::new(tx, Config::default()).map_err(|e| e.to_string())?;
+    watcher.watch(Path::new(&repo_path), RecursiveMode::Recursive).map_err(|e| e.to_string())?;
+
+    std::thread::spawn(move || {
+        let mut last = std::collections::HashMap::<PathBuf, std::time::Instant>::new();
+        loop {
+            if let Ok(event) = rx.recv() {
+                let evt = match event { Ok(e) => e, Err(_) => continue };
+                let paths = evt.paths;
+                for p in paths {
+                    if p.is_dir() { continue; }
+                    if p.extension().and_then(|s| s.to_str()).unwrap_or("") != "md" { continue; }
+                    let now = std::time::Instant::now();
+                    let prev = last.get(&p).cloned();
+                    if let Some(t) = prev { if now.duration_since(t).as_millis() < debounce_ms as u128 { continue; } }
+                    last.insert(p.clone(), now);
+                    // Optional include/exclude matching via ignore::Override
+                    let mut ov = ignore::overrides::OverrideBuilder::new(&repo_path);
+                    for g in &include { let _ = ov.add(g); }
+                    for g in &exclude { let _ = ov.add(&format!("!{}", g)); }
+                    if let Ok(ovm) = ov.build() {
+                        if !ovm.matched(&p, false).is_whitelist() { continue; }
+                    }
+                    // Rescan one file
+                    let _ = upsert_doc(&db, Path::new(&repo_path), &p);
+                    let _ = app.emit("progress.scan", serde_json::json!({
+                        "event": match evt.kind { EventKind::Create(_) => "create", EventKind::Modify(_) => "modify", EventKind::Remove(_) => "remove", _ => "other" },
+                        "path": p.to_string_lossy(),
+                    }));
+                }
+            }
+        }
+    });
+    Ok(())
 }

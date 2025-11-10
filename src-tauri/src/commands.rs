@@ -1,4 +1,5 @@
-use crate::{db::Db, scan, graph};
+use crate::{db::Db, scan};
+use tauri::Emitter;
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -70,7 +71,7 @@ pub async fn repos_remove(id_or_name: String, db: State<'_, std::sync::Arc<Db>>)
 }
 
 #[tauri::command]
-pub async fn scan_repo(repo_path: String, filters: Option<ScanFilters>, watch: Option<bool>, debounce: Option<u64>, db: State<'_, std::sync::Arc<Db>>) -> Result<ScanJobReport, String> {
+pub async fn scan_repo(repo_path: String, filters: Option<ScanFilters>, watch: Option<bool>, debounce: Option<u64>, db: State<'_, std::sync::Arc<Db>>, app: tauri::AppHandle) -> Result<ScanJobReport, String> {
     let job_id = Uuid::new_v4().to_string();
     let repo_id = {
         let conn = db.0.lock();
@@ -90,7 +91,10 @@ pub async fn scan_repo(repo_path: String, filters: Option<ScanFilters>, watch: O
     let stats = scan::scan_once(&db, &repo_path, &include, &exclude)?;
     let conn2 = db.0.lock();
     conn2.execute("UPDATE scan_job SET status='success', stats=?2, finished_at=datetime('now') WHERE id=?1", params![job_id, serde_json::to_string(&serde_json::json!({"files_scanned": stats.files_scanned, "docs_added": stats.docs_added, "errors": stats.errors})).unwrap()]).map_err(|e| e.to_string())?;
-    let _ = (watch, debounce);
+    if watch.unwrap_or(false) {
+        let _ = app.emit("progress.scan", serde_json::json!({"event": "watch-start", "path": repo_path}));
+        let _ = scan::watch_repo(db.inner().clone(), repo_path.clone(), include, exclude, debounce.unwrap_or(200), app);
+    }
     Ok(ScanJobReport { job_id, files_scanned: stats.files_scanned, docs_added: stats.docs_added, errors: stats.errors })
 }
 
@@ -119,7 +123,7 @@ pub async fn docs_create(payload: DocCreate, db: State<'_, std::sync::Arc<Db>>) 
     .map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
     // update links
-    graph::update_links_for_doc(&db.0.lock(), &doc_id, &payload.body)?;
+    crate::graph::update_links_for_doc(&db.0.lock(), &doc_id, &payload.body)?;
     Ok(serde_json::json!({"doc_id": doc_id}))
 }
 
@@ -142,7 +146,7 @@ pub async fn docs_update(payload: DocUpdate, db: State<'_, std::sync::Arc<Db>>) 
         params![payload.body, payload.doc_id]).map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
     // update links
-    graph::update_links_for_doc(&db.0.lock(), &payload.doc_id, &payload.body)?;
+    crate::graph::update_links_for_doc(&db.0.lock(), &payload.doc_id, &payload.body)?;
     Ok(serde_json::json!({"version_id": version_id}))
 }
 
