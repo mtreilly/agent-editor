@@ -46,6 +46,13 @@ flowchart TD
   DB <--> EL
   CORE <--> AI
 
+  subgraph DevHeadless
+    Sidecar[RPC Sidecar]
+  end
+  Sidecar <--> DB
+  Sidecar <--> FTS
+  Sidecar <--> GR
+
   subgraph Plugins
     UIPlugin[UI Plugins (React)]
     CorePlugin[Core Plugins (Rust/Node/Go)]
@@ -708,6 +715,9 @@ SELECT path FROM q WHERE json_extract(path, '$[#-1]') = :end_id LIMIT 1;
 ```
 
 ### TS client wrappers
+Headless JSON-RPC sidecar for automation:
+- Run: `cargo run --manifest-path src-tauri/Cargo.toml --bin rpc_sidecar`
+- Endpoint: `http://127.0.0.1:35678/rpc` (used by CLI/tests)
 ```ts
 // src/ipc/client.ts
 import { invoke } from '@tauri-apps/api/tauri'

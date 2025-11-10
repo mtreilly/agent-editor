@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "pnpm tauri dev",
     "dev:web": "vite",
+    "rpc:dev": "cargo run --manifest-path src-tauri/Cargo.toml --bin rpc_sidecar",
     "build": "vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
