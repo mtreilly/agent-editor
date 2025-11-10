@@ -117,7 +117,7 @@ pub async fn docs_create(payload: DocCreate, db: State<'_, std::sync::Arc<Db>>) 
     tx.execute("UPDATE doc SET current_version_id=?1 WHERE id=?2", params![version_id, doc_id]).map_err(|e| e.to_string())?;
     // FTS update
     tx.execute(
-        "INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2",
+        "INSERT INTO doc_fts(docid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2",
         params![payload.body, doc_id],
     )
     .map_err(|e| e.to_string())?;
@@ -153,8 +153,8 @@ pub async fn docs_update(payload: DocUpdate, db: State<'_, std::sync::Arc<Db>>) 
     tx.execute("UPDATE doc SET current_version_id=?1, size_bytes=?2, line_count=?3, updated_at=datetime('now') WHERE id=?4",
         params![version_id, payload.body.len() as i64, payload.body.lines().count() as i64, payload.doc_id]).map_err(|e| e.to_string())?;
     // FTS update: delete+insert
-    tx.execute("INSERT INTO doc_fts(doc_fts,rowid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![payload.doc_id]).ok();
-    tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2",
+    tx.execute("INSERT INTO doc_fts(doc_fts,docid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![payload.doc_id]).ok();
+    tx.execute("INSERT INTO doc_fts(docid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2",
         params![payload.body, payload.doc_id]).map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
     // release connection lock before link update to avoid deadlock
@@ -180,7 +180,7 @@ pub async fn docs_get(doc_id: String, content: Option<bool>, db: State<'_, std::
             "current_version_id": r.get::<_, String>(4).unwrap_or_default(),
         });
         if include_body {
-            let body: Option<String> = conn.query_row("SELECT body FROM doc_fts WHERE rowid=(SELECT rowid FROM doc WHERE id=?1)", params![&id], |rr| rr.get(0)).ok();
+            let body: Option<String> = conn.query_row("SELECT body FROM doc_fts WHERE docid=(SELECT rowid FROM doc WHERE id=?1)", params![&id], |rr| rr.get(0)).ok();
             out["body"] = body.map(serde_json::Value::String).unwrap_or(serde_json::Value::Null);
         }
         return Ok(out);
@@ -319,7 +319,7 @@ pub fn ai_run_core(db: &std::sync::Arc<Db>, req: AiRunRequest) -> Result<serde_j
     // Fetch body
     let conn = db.0.lock();
     let body: String = conn.query_row(
-        "SELECT body FROM doc_fts WHERE rowid=(SELECT rowid FROM doc WHERE id=?1 OR slug=?1)",
+        "SELECT body FROM doc_fts WHERE docid=(SELECT rowid FROM doc WHERE id=?1 OR slug=?1)",
         rusqlite::params![req.doc_id],
         |r| r.get(0),
     ).map_err(|e| e.to_string())?;

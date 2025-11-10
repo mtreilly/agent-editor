@@ -119,7 +119,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             tx.execute("INSERT INTO doc_blob(id,content,size_bytes) VALUES(?,?,?)", params![blob_id, p.body.as_bytes(), p.body.len() as i64]).map_err(|e| e.to_string())?;
             tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash) VALUES(?,?,?,?)", params![version_id, doc_id, blob_id, version_id]).map_err(|e| e.to_string())?;
             tx.execute("UPDATE doc SET current_version_id=?1 WHERE id=?2", params![version_id, doc_id]).map_err(|e| e.to_string())?;
-            tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![p.body, doc_id]).map_err(|e| e.to_string())?;
+            tx.execute("INSERT INTO doc_fts(docid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![p.body, doc_id]).map_err(|e| e.to_string())?;
             tx.commit().map_err(|e| e.to_string())?;
             Ok(serde_json::json!({"doc_id": doc_id}))
         }
@@ -133,8 +133,8 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             tx.execute("INSERT INTO doc_blob(id,content,size_bytes) VALUES(?,?,?)", params![blob_id, p.body.as_bytes(), p.body.len() as i64]).map_err(|e| e.to_string())?;
             tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash,message) VALUES(?,?,?,?,?)", params![version_id, p.doc_id, blob_id, version_id, p.message.unwrap_or_default()]).map_err(|e| e.to_string())?;
             tx.execute("UPDATE doc SET current_version_id=?1, size_bytes=?2, line_count=?3, updated_at=datetime('now') WHERE id=?4", params![version_id, p.body.len() as i64, p.body.lines().count() as i64, p.doc_id]).map_err(|e| e.to_string())?;
-            tx.execute("INSERT INTO doc_fts(doc_fts,rowid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![p.doc_id]).ok();
-            tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![p.body, p.doc_id]).map_err(|e| e.to_string())?;
+            tx.execute("INSERT INTO doc_fts(doc_fts,docid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![p.doc_id]).ok();
+            tx.execute("INSERT INTO doc_fts(docid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![p.body, p.doc_id]).map_err(|e| e.to_string())?;
             tx.commit().map_err(|e| e.to_string())?;
             Ok(serde_json::json!({"version_id": version_id}))
         }
@@ -155,7 +155,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
                     "current_version_id": r.get::<_, String>(4).unwrap_or_default(),
                 });
                 if p.content.unwrap_or(false) {
-                    let body: Option<String> = conn.query_row("SELECT body FROM doc_fts WHERE rowid=(SELECT rowid FROM doc WHERE id=?1)", params![&id], |rr| rr.get(0)).ok();
+                    let body: Option<String> = conn.query_row("SELECT body FROM doc_fts WHERE docid=(SELECT rowid FROM doc WHERE id=?1)", params![&id], |rr| rr.get(0)).ok();
                     out["body"] = body.map(serde_json::Value::String).unwrap_or(serde_json::Value::Null);
                 }
                 Ok(out)

@@ -112,8 +112,8 @@ fn upsert_doc(db: &Db, repo_root: &Path, file_path: &Path) -> Result<bool, Strin
         tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash) VALUES(?,?,?,?)", params![version_id, doc_id, blob_id, content_hash]).map_err(|e| e.to_string())?;
         tx.execute("UPDATE doc SET current_version_id=?1, size_bytes=?2, line_count=?3, updated_at=datetime('now') WHERE id=?4", params![version_id, size, lines, doc_id]).map_err(|e| e.to_string())?;
         // Update FTS
-        tx.execute("INSERT INTO doc_fts(doc_fts,rowid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![doc_id]).ok();
-        tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![content, doc_id]).map_err(|e| e.to_string())?;
+    tx.execute("INSERT INTO doc_fts(doc_fts,docid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![doc_id]).ok();
+    tx.execute("INSERT INTO doc_fts(docid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![content, doc_id]).map_err(|e| e.to_string())?;
     }
 
     tx.commit().map_err(|e| e.to_string())?;
