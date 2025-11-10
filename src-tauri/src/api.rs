@@ -86,12 +86,25 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             #[derive(Deserialize)] struct P { repo_path: String, filters: Option<serde_json::Value>, watch: Option<bool>, debounce: Option<u64> }
             let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
             let job_id = Uuid::new_v4().to_string();
+            // ensure repo row
+            let repo_id = {
+                let mut conn = db.0.lock();
+                let repo_id: Option<String> = conn.query_row("SELECT id FROM repo WHERE path=?1 OR name=?1", params![p.repo_path], |r| r.get(0)).optional().map_err(|e| e.to_string())?;
+                let repo_id = repo_id.unwrap_or_else(|| { let id = Uuid::new_v4().to_string(); conn.execute("INSERT OR IGNORE INTO repo(id,name,path) VALUES(?,?,?)", params![id.clone(), &p.repo_path, &p.repo_path]).ok(); id });
+                conn.execute("INSERT INTO scan_job(id,repo_id,status,stats) VALUES(?,?,'running',json('{}'))", params![&job_id, &repo_id]).map_err(|e| e.to_string())?;
+                repo_id
+            };
+            // parse filters
+            let (include, exclude): (Vec<String>, Vec<String>) = if let Some(f) = p.filters {
+                let inc = f.get("include").and_then(|v| v.as_array()).map(|a| a.iter().filter_map(|s| s.as_str().map(|x| x.to_string())).collect()).unwrap_or_else(|| vec![]);
+                let exc = f.get("exclude").and_then(|v| v.as_array()).map(|a| a.iter().filter_map(|s| s.as_str().map(|x| x.to_string())).collect()).unwrap_or_else(|| vec![]);
+                (inc, exc)
+            } else { (vec![], vec![]) };
+            // run scan once (watching not supported in RPC sidecar)
+            let stats = crate::scan::scan_once(&db, &p.repo_path, &include, &exclude).map_err(|e| e.to_string())?;
             let mut conn = db.0.lock();
-            let repo_id: Option<String> = conn.query_row("SELECT id FROM repo WHERE path=?1 OR name=?1", params![p.repo_path], |r| r.get(0)).optional().map_err(|e| e.to_string())?;
-            let repo_id = repo_id.unwrap_or_else(|| { let id = Uuid::new_v4().to_string(); conn.execute("INSERT OR IGNORE INTO repo(id,name,path) VALUES(?,?,?)", params![id.clone(), &p.repo_path, &p.repo_path]).ok(); id });
-            conn.execute("INSERT INTO scan_job(id,repo_id,status,stats) VALUES(?,?,'queued',json('{}'))", params![job_id, repo_id]).map_err(|e| e.to_string())?;
-            let _ = (p.filters, p.watch, p.debounce);
-            Ok(serde_json::json!({"job_id": job_id, "files_scanned": 0, "docs_added": 0, "errors": 0}))
+            conn.execute("UPDATE scan_job SET status='success', stats=?2, finished_at=datetime('now') WHERE id=?1", params![&job_id, serde_json::to_string(&serde_json::json!({"files_scanned": stats.files_scanned, "docs_added": stats.docs_added, "errors": stats.errors})).unwrap()]).map_err(|e| e.to_string())?;
+            Ok(serde_json::json!({"job_id": job_id, "files_scanned": stats.files_scanned, "docs_added": stats.docs_added, "errors": stats.errors}))
         }
         "docs_create" => {
             #[derive(Deserialize)] struct P { repo_id: String, slug: String, title: String, body: String }

@@ -145,6 +145,8 @@ pub async fn docs_update(payload: DocUpdate, db: State<'_, std::sync::Arc<Db>>) 
     tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2",
         params![payload.body, payload.doc_id]).map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
+    // release connection lock before link update to avoid deadlock
+    drop(conn);
     // update links
     crate::graph::update_links_for_doc(&db.0.lock(), &payload.doc_id, &payload.body)?;
     Ok(serde_json::json!({"version_id": version_id}))

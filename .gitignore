@@ -4,6 +4,9 @@ dist/
 .vite/
 .pnpm-store/
 cli/agent-editor*
+.sidecar.*
+test-results/
+src-tauri/.dev/
 
 # Tauri / Rust
 src-tauri/target/
