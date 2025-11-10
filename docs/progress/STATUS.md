@@ -1,6 +1,6 @@
 # Status — agent-editor
 
-Phase: M1 Core DB + Scanner + FTS (in progress)
+Phase: M1 Core DB + Scanner + FTS (nearing completion)
 
 Completed
 - Core DB schema + FTS5 virtual table
@@ -9,15 +9,15 @@ Completed
 - Initial UI routes (home, search, repo, doc)
 - Scanner pass: .gitignore-aware, imports *.md into DB with versions and FTS
 - Wiki-link extraction: populate `link` on create/update and during scan
- - Graph APIs: neighbors/backlinks exposed over IPC/JSON-RPC and integrated in CLI/UI
+ - Graph APIs: neighbors/backlinks/related/path exposed over IPC/JSON-RPC and integrated in CLI/UI
  - Watcher-based incremental scan (notify) with debounce + progress events
  - Milkdown editor + schema for wiki-links and anchor marks
 - UI: doc graph/backlinks view; AI run with optional anchor context
  - UI: wiki-link navigation via editor; search results link to doc
 
 Pending
-- Graph APIs path/related
 - UI: search refinements, performance tweaks, settings
+- Router plugin generated route tree types (remove shim)
 
 Notes
 - Tauri build requires a valid RGBA icon at `src-tauri/icons/icon.png` for packaging.

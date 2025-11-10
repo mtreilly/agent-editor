@@ -741,10 +741,13 @@ export const anchorsUpsert = (doc_id: string, anchor_id: string, line: number) =
   invoke<{ ok: boolean }>('anchors_upsert', { docId: doc_id, anchorId: anchor_id, line })
 ```
 
+Browser fallback (tests): Wrap `invoke` with a guard that returns empty stubs when not running in Tauri. This allows Playwright/web-only tests to render UI without desktop runtime.
+
 - Error model: commands return `Result<Ok, ErrString>`. Error strings are structured JSON: `{ code, message, details }`. Long ops stream progress via `tauri::async_runtime::spawn` and window `emit("progress.scan", {...})`.
 
 ## Routing (TanStack Start)
 - Routes: `/` (home), `/search`, `/doc/:id`, `/repo`, `/settings`, `/plugins`, `/graph/:id`
+- Vite plugin config: `TanStackRouterVite({ routesDirectory: 'app/routes', generatedRouteTree: 'app/routeTree.gen.ts' })` to generate route tree for type-safe routing.
 - SSR strategy:
   - Desktop: client-only hydration; data via IPC.
   - Web build (dev docs): SSR enabled for static pages; dynamic routes client-only.
@@ -835,6 +838,7 @@ func (m model) View() string { return "Search: " + m.query }
 - Integration: scan→db→fts flow; plugin command execution; Electric sync on doc/link.
 - UI smoke: Playwright at 320/768/1024/1440 for editor input, search, navigation, plugins view.
 - Plugin conformance: run plugin test harness to validate permissions and API shape.
+ - E2E additions: graph path tool smoke; doc page panels with web-only IPC stubs. CLI smoke script exercises repo add/scan/search/graph.
 
 ## Milestones
 1) M1 Core DB + Scanner + FTS (Exit: scan repo, search works; 100k docs index <60m, search <80ms P95)

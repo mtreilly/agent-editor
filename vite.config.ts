@@ -4,7 +4,14 @@ import { TanStackRouterVite } from '@tanstack/router-vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [react(), TanStackRouterVite(), tailwindcss()],
+  plugins: [
+    react(),
+    TanStackRouterVite({
+      routesDirectory: 'app/routes',
+      generatedRouteTree: 'app/routeTree.gen.ts',
+    }),
+    tailwindcss(),
+  ],
   server: {
     port: 5173,
     strictPort: true,
