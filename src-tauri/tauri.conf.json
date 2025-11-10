@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "agent-editor",
+  "version": "0.0.0",
+  "identifier": "com.agent.editor",
+  "build": {
+    "beforeDevCommand": "pnpm dev:web",
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      { "title": "agent-editor", "width": 1200, "height": 800 }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app"],
+    "windows": {
+      "wix": { "fragmentPaths": [] }
+    }
+  }
+}

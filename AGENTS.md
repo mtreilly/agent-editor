@@ -31,26 +31,7 @@
 ```
 agent-editor/
 ├── AGENTS.md              # This file
-├── README.md              # Project overview
 ├── CLAUDE.md              # Project-specific instructions
-├── src/                   # Source code
-│   ├── features/          # Feature-based organization
-│   │   ├── editor/        # Core editor functionality
-│   │   ├── commands/      # Command palette
-│   │   ├── files/         # File system operations
-│   │   └── extensions/    # Extension system
-│   ├── components/        # Shared UI components
-│   ├── hooks/             # Shared React hooks
-│   ├── utils/             # Shared utilities
-│   └── types/             # TypeScript types
-├── public/
-│   └── locales/           # i18n translations
-│       ├── en/
-│       └── {lang}/
-├── tests/                 # Test files
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
 └── docs/
     ├── design/            # Design principles and patterns
     ├── plans/             # Project plans and roadmaps
@@ -121,6 +102,11 @@ logging:
 - Features: `{feature}/components/`, `{feature}/hooks/`, `{feature}/utils/`
 - Shared code in root-level directories
 - Clear separation: UI components, business logic, API layer
+
+### Naming Conventions
+- No `new*` prefixes for constructors/factories or command builders. Use canonical names.
+  - CLI commands: `repoCmd`, `docCmd`, `pluginCmd`, `rootCmd` (not `newRepoCmd`, etc.).
+  - Keep names stable and clear; no migration concerns apply (greenfield).
 
 ### Tech Stack
 **Frontend (React/TypeScript):**
@@ -212,46 +198,6 @@ pnpm format                       # Format code
 - Close items by linking to resolving commits/PRs/docs
 - Treat this as handoff hygiene: leave open threads visible for the next agent
 
-## Initial Roadmap (Phases)
-
-### Phase 1: Foundation
-- [ ] Project scaffolding and tooling setup
-- [ ] Create AGENTS.md and design docs
-- [ ] Basic editor interface with syntax highlighting
-- [ ] File tree and navigation
-- [ ] Configuration management
-- [ ] i18n infrastructure
-
-### Phase 2: Core Features
-- [ ] Command palette with fuzzy search
-- [ ] File operations (create, rename, delete)
-- [ ] Multi-file editing (tabs/splits)
-- [ ] Search and replace
-- [ ] Keyboard shortcuts system
-- [ ] Theme support (light/dark)
-
-### Phase 3: Agent Integration
-- [ ] Agent API client
-- [ ] Command execution interface
-- [ ] Real-time collaboration features
-- [ ] Extension system architecture
-- [ ] Agent capability registration
-
-### Phase 4: Polish & Extensions
-- [ ] Performance optimization
-- [ ] Accessibility audit and fixes
-- [ ] Mobile responsive design
-- [ ] Extension marketplace
-- [ ] Documentation completion
-- [ ] User testing and feedback
-
-### Phase 5: Advanced Features (Future)
-- [ ] Git integration
-- [ ] Terminal integration
-- [ ] Debugging interface
-- [ ] Code intelligence (LSP)
-- [ ] Collaborative editing
-
 ## Next Actions for Agents
 - Review `docs/OPEN_QUESTIONS.md` for active discussions
 - Check `docs/progress/STATUS.md` for current work
@@ -317,6 +263,7 @@ pnpm preview                      # Preview production build
 - Untested code paths
 - Barrel files (index.ts exports)
 - Type assertions without necessity
+- `new*` prefixes for functions/classes (e.g., `newPluginCmd`) — use canonical names (`pluginCmd`).
 
 ## Browser Automation
 - Use fangagent for all browser automation tasks
@@ -326,7 +273,6 @@ pnpm preview                      # Preview production build
 
 ## Multi-Agent Collaboration
 - Git worktrees for parallel branches
-- `SHARED.md` or `{AGENT-NAME}-notes.md` for async communication
 - Independent dev servers on different ports
 - Document completed work before handoff
 - Keep `docs/OPEN_QUESTIONS.md` updated
@@ -335,8 +281,8 @@ pnpm preview                      # Preview production build
 - Use `/compact` to summarize
 - Split plans into subdirectories
 - Move completed tasks to archive files
-- Use `TODO.md` for tracking work
-- Extract critical instructions to local `CLAUDE.md`
+- Use `docs/process/{Phase-name}.md` for tracking work
+- Extract critical instructions to local `AGENTS.md`
 
 ## Reference Resources
 - React docs: https://react.dev

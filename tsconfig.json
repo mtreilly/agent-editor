@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./*"],
+      "app/*": ["./app/*"]
+    },
+    "types": ["vite/client"]
+  },
+  "include": ["app/**/*", "src/**/*", "src-tauri/**/*", "vite.config.ts"]
+}
