@@ -20,9 +20,10 @@ Completed
 - UI: doc graph/backlinks view; AI run with optional anchor context
  - UI: wiki-link navigation via editor; search results link to doc
  - Search: keyboard navigation, sanitized snippets, listbox ARIA + roving focus
- - Graph: neighbor depth control (1–3) and reactive fetch
- - Editor: anchors panel supports Jump and Copy Link; editor API exposes jumpToAnchor and anchorLinkFor
- - Doc route: supports `?anchor=` param to auto-jump in editor
+- Graph: neighbor depth control (1–3) and reactive fetch
+- Editor: anchors panel supports Jump and Copy Link; editor API exposes jumpToAnchor and anchorLinkFor
+- Doc route: supports `?anchor=` param to auto-jump in editor
+ - Parser: wiki-link extractor ignores escaped `\[\[`; tests for non-ASCII slugs, alias brackets, and unmatched opens
 
 Exit criteria met
 - repo add/scan works end-to-end with JSON-RPC and CLI
