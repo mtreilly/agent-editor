@@ -35,7 +35,7 @@ pub fn scan_once(db: &Db, repo_path: &str, include: &[String], exclude: &[String
                     Err(e) => { if debug { eprintln!("[scan] upsert error for {}: {}", path.display(), e); } stats.errors += 1; },
                 }
             }
-            Err(_) => stats.errors += 1,
+            Err(e) => { stats.errors += 1; if debug { eprintln!("[scan] walk error: {}", e); } }
         }
     }
     Ok(stats)
@@ -93,6 +93,7 @@ fn upsert_doc(db: &Db, repo_root: &Path, file_path: &Path) -> Result<bool, Strin
     };
 
     // Dedupe against current version hash
+    let version_hash = format!("{}:{}", doc_id, content_hash);
     let mut changed = true;
     if !is_new_doc {
         if let Ok(prev_hash) = tx.query_row(
@@ -100,7 +101,7 @@ fn upsert_doc(db: &Db, repo_root: &Path, file_path: &Path) -> Result<bool, Strin
             params![&doc_id],
             |r| r.get::<_, String>(0),
         ) {
-            if prev_hash == content_hash { changed = false; }
+            if prev_hash == version_hash { changed = false; }
         }
     }
 
@@ -109,11 +110,11 @@ fn upsert_doc(db: &Db, repo_root: &Path, file_path: &Path) -> Result<bool, Strin
         let blob_id = Uuid::new_v4().to_string();
         let version_id = Uuid::new_v4().to_string();
         tx.execute("INSERT INTO doc_blob(id,content,size_bytes) VALUES(?,?,?)", params![blob_id, content.as_bytes(), size]).map_err(|e| e.to_string())?;
-        tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash) VALUES(?,?,?,?)", params![version_id, doc_id, blob_id, content_hash]).map_err(|e| e.to_string())?;
+        tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash) VALUES(?,?,?,?)", params![version_id, doc_id, blob_id, version_hash]).map_err(|e| e.to_string())?;
         tx.execute("UPDATE doc SET current_version_id=?1, size_bytes=?2, line_count=?3, updated_at=datetime('now') WHERE id=?4", params![version_id, size, lines, doc_id]).map_err(|e| e.to_string())?;
         // Update FTS
-    tx.execute("INSERT INTO doc_fts(doc_fts,docid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![doc_id]).ok();
-    tx.execute("INSERT INTO doc_fts(docid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![content, doc_id]).map_err(|e| e.to_string())?;
+    tx.execute("INSERT INTO doc_fts(doc_fts,rowid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![doc_id]).ok();
+    tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![content, doc_id]).map_err(|e| e.to_string())?;
     }
 
     tx.commit().map_err(|e| e.to_string())?;

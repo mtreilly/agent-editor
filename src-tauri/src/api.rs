@@ -117,9 +117,11 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             tx.execute("INSERT INTO doc(id,repo_id,folder_id,slug,title,size_bytes,line_count) VALUES(?,?,?,?,?,?,?)",
                 params![doc_id, p.repo_id, tx.last_insert_rowid(), p.slug, p.title, p.body.len() as i64, p.body.lines().count() as i64]).map_err(|e| e.to_string())?;
             tx.execute("INSERT INTO doc_blob(id,content,size_bytes) VALUES(?,?,?)", params![blob_id, p.body.as_bytes(), p.body.len() as i64]).map_err(|e| e.to_string())?;
-            tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash) VALUES(?,?,?,?)", params![version_id, doc_id, blob_id, version_id]).map_err(|e| e.to_string())?;
+            let body_hash = blake3::hash(p.body.as_bytes()).to_hex().to_string();
+            let version_hash = format!("{}:{}", doc_id, body_hash);
+            tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash) VALUES(?,?,?,?)", params![version_id, doc_id, blob_id, version_hash]).map_err(|e| e.to_string())?;
             tx.execute("UPDATE doc SET current_version_id=?1 WHERE id=?2", params![version_id, doc_id]).map_err(|e| e.to_string())?;
-            tx.execute("INSERT INTO doc_fts(docid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![p.body, doc_id]).map_err(|e| e.to_string())?;
+            tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![p.body, doc_id]).map_err(|e| e.to_string())?;
             tx.commit().map_err(|e| e.to_string())?;
             Ok(serde_json::json!({"doc_id": doc_id}))
         }
@@ -133,8 +135,8 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             tx.execute("INSERT INTO doc_blob(id,content,size_bytes) VALUES(?,?,?)", params![blob_id, p.body.as_bytes(), p.body.len() as i64]).map_err(|e| e.to_string())?;
             tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash,message) VALUES(?,?,?,?,?)", params![version_id, p.doc_id, blob_id, version_id, p.message.unwrap_or_default()]).map_err(|e| e.to_string())?;
             tx.execute("UPDATE doc SET current_version_id=?1, size_bytes=?2, line_count=?3, updated_at=datetime('now') WHERE id=?4", params![version_id, p.body.len() as i64, p.body.lines().count() as i64, p.doc_id]).map_err(|e| e.to_string())?;
-            tx.execute("INSERT INTO doc_fts(doc_fts,docid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![p.doc_id]).ok();
-            tx.execute("INSERT INTO doc_fts(docid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![p.body, p.doc_id]).map_err(|e| e.to_string())?;
+            tx.execute("INSERT INTO doc_fts(doc_fts,rowid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))", params![p.doc_id]).ok();
+            tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![p.body, p.doc_id]).map_err(|e| e.to_string())?;
             tx.commit().map_err(|e| e.to_string())?;
             Ok(serde_json::json!({"version_id": version_id}))
         }
@@ -155,7 +157,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
                     "current_version_id": r.get::<_, String>(4).unwrap_or_default(),
                 });
                 if p.content.unwrap_or(false) {
-                    let body: Option<String> = conn.query_row("SELECT body FROM doc_fts WHERE docid=(SELECT rowid FROM doc WHERE id=?1)", params![&id], |rr| rr.get(0)).ok();
+                    let body: Option<String> = conn.query_row("SELECT body FROM doc_fts WHERE rowid=(SELECT rowid FROM doc WHERE id=?1)", params![&id], |rr| rr.get(0)).ok();
                     out["body"] = body.map(serde_json::Value::String).unwrap_or(serde_json::Value::Null);
                 }
                 Ok(out)
@@ -276,14 +278,18 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
         "fts_stats" => {
             let conn = db.0.lock();
             let doc_count: i64 = conn.query_row("SELECT COUNT(*) FROM doc WHERE is_deleted=0", [], |r| r.get(0)).unwrap_or(0);
-            let fts_count: i64 = conn.query_row("SELECT COUNT(*) FROM doc_fts", [], |r| r.get(0)).unwrap_or(0);
+            let present: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM doc d WHERE d.is_deleted=0 AND EXISTS (SELECT 1 FROM doc_fts f WHERE f.rowid=d.rowid)",
+                [],
+                |r| r.get(0),
+            ).unwrap_or(0);
             let missing: i64 = conn.query_row(
-                "SELECT COUNT(*) FROM doc d LEFT JOIN doc_fts f ON f.rowid = d.rowid WHERE d.is_deleted=0 AND f.rowid IS NULL",
+                "SELECT COUNT(*) FROM doc d WHERE d.is_deleted=0 AND NOT EXISTS (SELECT 1 FROM doc_fts f WHERE f.rowid=d.rowid)",
                 [],
                 |r| r.get(0),
             ).unwrap_or(0);
             let last_update: Option<String> = conn.query_row("SELECT MAX(updated_at) FROM doc", [], |r| r.get(0)).ok();
-            Ok(serde_json::json!({"doc_count": doc_count, "fts_count": fts_count, "fts_missing": missing, "last_update": last_update}))
+            Ok(serde_json::json!({"doc_count": doc_count, "fts_count": present, "fts_missing": missing, "last_update": last_update}))
         }
         "scan_file" => {
             #[derive(Deserialize)] struct P { repo_path: String, file_path: String }
