@@ -11,11 +11,14 @@ use tauri::Manager;
 
 fn main() {
     let ctx = tauri::generate_context!();
-    let app_dir: PathBuf = ctx
-        .path()
-        .app_data_dir()
-        .expect("app data dir");
-    let db_path = app_dir.join("agent-editor.db");
+    // Dev-friendly DB location; packaging may override via AE_DB
+    let db_path = std::env::var("AE_DB")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            let p = PathBuf::from(".dev/agent-editor.db");
+            if let Some(parent) = p.parent() { let _ = std::fs::create_dir_all(parent); }
+            p
+        });
     let db_state = std::sync::Arc::new(db::open_db(&db_path).expect("open db"));
 
     tauri::Builder::default()
