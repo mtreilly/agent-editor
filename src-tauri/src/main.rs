@@ -4,6 +4,7 @@ mod db;
 mod commands;
 mod api;
 mod scan;
+mod graph;
 
 use std::path::PathBuf;
 use tauri::Manager;

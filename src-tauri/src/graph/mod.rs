@@ -50,6 +50,14 @@ fn extract_wikilinks(content: &str) -> Vec<(String, i64, i64)> {
         }
         let mut s: &str = &cleaned;
         while let Some(start) = s.find("[[") {
+            // ignore escaped wikilinks like \[[NotALink]]
+            if start > 0 {
+                let prev = s.as_bytes()[start - 1];
+                if prev == b'\\' {
+                    s = &s[start + 2..];
+                    continue;
+                }
+            }
             let rest = &s[start + 2..];
             if let Some(end_rel) = rest.find("]]") {
                 let inner = &rest[..end_rel];
@@ -114,5 +122,36 @@ mod tests {
         assert_eq!(links.len(), 2);
         assert_eq!(links[0].0, "Topic");
         assert_eq!(links[1].0, "Second");
+    }
+
+    #[test]
+    fn test_escaped_double_brackets_are_ignored() {
+        let md = r"\[\[NotALink]] and [[Real]]";
+        let links = extract_wikilinks(md);
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].0, "Real");
+    }
+
+    #[test]
+    fn test_non_ascii_slug_preserved() {
+        let md = "[[Über-αβγ]] text";
+        let links = extract_wikilinks(md);
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].0, "Über-αβγ");
+    }
+
+    #[test]
+    fn test_alias_with_brackets() {
+        let md = "before [[Slug|Alias with [brackets]]] after";
+        let links = extract_wikilinks(md);
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].0, "Slug");
+    }
+
+    #[test]
+    fn test_unmatched_open_is_ignored() {
+        let md = "Dangling [[Link here";
+        let links = extract_wikilinks(md);
+        assert_eq!(links.len(), 0);
     }
 }
