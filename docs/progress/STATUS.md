@@ -24,7 +24,8 @@ Completed
 - Editor: anchors panel supports Jump and Copy Link; editor API exposes jumpToAnchor and anchorLinkFor
 - Doc route: supports `?anchor=` param to auto-jump in editor
  - Parser: wiki-link extractor ignores escaped `\[\[`; tests for non-ASCII slugs, alias brackets, and unmatched opens
- - AI: provider registry (SQLite) with privacy defaults; CLI and IPC for list/enable/disable wired
+- AI: provider registry (SQLite) with privacy defaults; CLI and IPC for list/enable/disable wired
+ - Packaging readiness: RGBA icon added; desktop uses AE_DB or .dev DB for builds/tests
 
 Exit criteria met
 - repo add/scan works end-to-end with JSON-RPC and CLI
