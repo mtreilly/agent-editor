@@ -46,5 +46,20 @@ export function Editor({ value, onChange, docId, onReady }: Props) {
       .use(anchorMark)
   }, [value])
 
-  return <Milkdown />
+  const onClick = React.useCallback((e: React.MouseEvent) => {
+    const el = e.target as HTMLElement
+    if (el && el.tagName === 'A' && el.classList.contains('wiki')) {
+      e.preventDefault()
+      const slug = (el as HTMLAnchorElement).getAttribute('data-slug') || ''
+      // Defer navigation to parent via a custom event
+      const evt = new CustomEvent('wiki:navigate', { detail: { slug } })
+      el.dispatchEvent(evt)
+    }
+  }, [])
+
+  return (
+    <div onClick={onClick}>
+      <Milkdown />
+    </div>
+  )
 }

@@ -12,7 +12,8 @@ Completed
  - Graph APIs: neighbors/backlinks exposed over IPC/JSON-RPC and integrated in CLI/UI
  - Watcher-based incremental scan (notify) with debounce + progress events
  - Milkdown editor + schema for wiki-links and anchor marks
- - UI: doc graph/backlinks view; AI run with optional anchor context
+- UI: doc graph/backlinks view; AI run with optional anchor context
+ - UI: wiki-link navigation via editor; search results link to doc
 
 Pending
 - Graph APIs path/related

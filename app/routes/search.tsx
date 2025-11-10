@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
 
 export const Route = createFileRoute('/search')({
@@ -33,7 +33,7 @@ function Search() {
       <ul className="space-y-3">
         {hits.map((h) => (
           <li key={h.id} className="border rounded p-3">
-            <div className="font-medium" dangerouslySetInnerHTML={{ __html: h.title_snip || h.slug }} />
+            <Link to={`/doc/${h.id}`} className="font-medium" dangerouslySetInnerHTML={{ __html: h.title_snip || h.slug }} />
             <div className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: h.body_snip }} />
           </li>
         ))}
@@ -41,4 +41,3 @@ function Search() {
     </main>
   )
 }
-

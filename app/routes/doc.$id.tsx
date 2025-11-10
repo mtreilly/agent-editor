@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
 import { Editor } from '../features/editor/Editor'
 
@@ -15,6 +15,9 @@ function DocPage() {
   const [prompt, setPrompt] = React.useState('Explain this section')
   const [aiOut, setAiOut] = React.useState('')
   const [lastAnchor, setLastAnchor] = React.useState<{ id: string; line: number } | null>(null)
+  const [backlinks, setBacklinks] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
+  const [neighbors, setNeighbors] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
+  const navigate = useNavigate()
 
   const editorApiRef = React.useRef<{ insertAnchor: (id?: string) => { id: string; line: number } | null } | null>(null)
 
@@ -23,6 +26,13 @@ function DocPage() {
       const d = await api.docsGet(id, true)
       setDoc(d)
       setBody(d.body || '')
+      // Load graph info for this doc id/slug
+      try {
+        const bl = await api.graphBacklinks(id)
+        const nb = await api.graphNeighbors(id, 1)
+        setBacklinks(bl)
+        setNeighbors(nb)
+      } catch {}
     })()
   }, [id])
 
@@ -80,6 +90,30 @@ function DocPage() {
         {aiOut && (
           <pre className="border rounded p-3 whitespace-pre-wrap text-sm">{aiOut}</pre>
         )}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        <section>
+          <h2 className="font-semibold mb-2">Backlinks</h2>
+          <ul className="space-y-2">
+            {backlinks.map((d) => (
+              <li key={d.id}>
+                <Link to={`/doc/${d.id}`}>{d.title || d.slug}</Link>
+              </li>
+            ))}
+            {!backlinks.length && <li className="text-sm text-gray-600">None</li>}
+          </ul>
+        </section>
+        <section>
+          <h2 className="font-semibold mb-2">Neighbors</h2>
+          <ul className="space-y-2">
+            {neighbors.map((d) => (
+              <li key={d.id}>
+                <Link to={`/doc/${d.id}`}>{d.title || d.slug}</Link>
+              </li>
+            ))}
+            {!neighbors.length && <li className="text-sm text-gray-600">None</li>}
+          </ul>
+        </section>
       </div>
     </main>
   )
