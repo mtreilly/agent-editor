@@ -17,3 +17,9 @@ test('repo route renders', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Add Repository' })).toBeVisible()
 })
 
+test('graph path tool renders', async ({ page }) => {
+  await page.goto('/graph/dummy')
+  await expect(page.getByRole('heading', { name: 'Graph' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Shortest Path' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Compute' })).toBeVisible()
+})

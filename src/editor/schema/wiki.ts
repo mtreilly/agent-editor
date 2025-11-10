@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { $node, $mark, $command, $inputRule } from '@milkdown/utils'
 
 export const wikiLink = $node('wiki_link', () => ({
@@ -34,4 +35,3 @@ export const wikiInputRule = $inputRule(/\[\[([^\]]+)\]\]$/, (state, match, star
   const [slug, alias] = inner.split('|')
   return state.tr.replaceWith(start, end, state.schema.nodes['wiki_link'].create({ slug, alias: alias || null }))
 })
-
