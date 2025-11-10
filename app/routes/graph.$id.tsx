@@ -14,19 +14,20 @@ function GraphPage() {
   const [target, setTarget] = React.useState('')
   const [path, setPath] = React.useState<string[]>([])
   const [pathDocs, setPathDocs] = React.useState<Array<{ id: string; title: string; slug: string }>>([])
+  const [depth, setDepth] = React.useState(1)
 
   React.useEffect(() => {
     ;(async () => {
       setLoading(true)
       try {
-        const [bl, nb] = await Promise.all([api.graphBacklinks(id), api.graphNeighbors(id, 1)])
+        const [bl, nb] = await Promise.all([api.graphBacklinks(id), api.graphNeighbors(id, depth)])
         setBacklinks(bl)
         setNeighbors(nb)
       } finally {
         setLoading(false)
       }
     })()
-  }, [id])
+  }, [id, depth])
 
   async function computePath() {
     if (!target) return
@@ -75,6 +76,14 @@ function GraphPage() {
       </section>
       <section>
         <h2 className="font-semibold mb-2">Neighbors</h2>
+        <div className="mb-2 flex items-center gap-2 text-sm">
+          <label htmlFor="depth">Depth</label>
+          <select id="depth" className="border rounded px-2 py-1" value={depth} onChange={(e) => setDepth(parseInt(e.target.value))}>
+            <option value={1}>1</option>
+            <option value={2}>2</option>
+            <option value={3}>3</option>
+          </select>
+        </div>
         <ul className="space-y-2">
           {neighbors.map((d) => (
             <li key={d.id} className="border rounded p-2">
