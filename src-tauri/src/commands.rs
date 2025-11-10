@@ -1,4 +1,4 @@
-use crate::{db::Db, scan};
+use crate::{db::Db, scan, graph};
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -118,6 +118,8 @@ pub async fn docs_create(payload: DocCreate, db: State<'_, std::sync::Arc<Db>>) 
     )
     .map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
+    // update links
+    graph::update_links_for_doc(&db.0.lock(), &doc_id, &payload.body)?;
     Ok(serde_json::json!({"doc_id": doc_id}))
 }
 
@@ -139,6 +141,8 @@ pub async fn docs_update(payload: DocUpdate, db: State<'_, std::sync::Arc<Db>>) 
     tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2",
         params![payload.body, payload.doc_id]).map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
+    // update links
+    graph::update_links_for_doc(&db.0.lock(), &payload.doc_id, &payload.body)?;
     Ok(serde_json::json!({"version_id": version_id}))
 }
 

@@ -90,6 +90,8 @@ fn upsert_doc(db: &Db, repo_root: &Path, file_path: &Path) -> Result<bool, Strin
     tx.execute("INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,d.title,?1,d.slug,d.repo_id FROM doc d WHERE d.id=?2", params![content, doc_id]).map_err(|e| e.to_string())?;
 
     tx.commit().map_err(|e| e.to_string())?;
+    // update links
+    crate::graph::update_links_for_doc(&db.0.lock(), &doc_id, &content)?;
     Ok(true)
 }
 
@@ -100,4 +102,3 @@ fn make_slug(repo_root: &Path, file_path: &Path) -> String {
     s = s.replace(' ', "-");
     s
 }
-
