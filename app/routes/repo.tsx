@@ -31,7 +31,7 @@ function RepoPage() {
     setLoading(true)
     try {
       const { repo_id } = await api.reposAdd(path, name || undefined)
-      await api.scanRepo(path, {}, false, 200)
+      await api.scanRepo(path, {}, true, 300)
       await load()
     } finally {
       setLoading(false)
