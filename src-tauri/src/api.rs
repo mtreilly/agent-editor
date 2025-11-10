@@ -142,6 +142,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             #[derive(Deserialize)] struct P { doc_id: String, content: Option<bool> }
             let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
             let conn = db.0.lock();
+            let debug = std::env::var("AE_DEBUG_SQL").ok().map(|v| v=="1" || v.eq_ignore_ascii_case("true")).unwrap_or(false);
             let mut stmt = conn.prepare("SELECT id,repo_id,slug,title,current_version_id FROM doc WHERE id=?1 OR slug=?1 LIMIT 1").map_err(|e| e.to_string())?;
             let mut rows = stmt.query(params![p.doc_id]).map_err(|e| e.to_string())?;
             if let Some(r) = rows.next().map_err(|e| e.to_string())? {
