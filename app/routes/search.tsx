@@ -12,6 +12,7 @@ function Search() {
   const [hits, setHits] = React.useState<api.SearchHit[]>([])
   const [loading, setLoading] = React.useState(false)
   const [active, setActive] = React.useState(0)
+  const listRef = React.useRef<HTMLUListElement | null>(null)
   const navigate = useNavigate()
 
   async function run() {
@@ -37,8 +38,17 @@ function Search() {
       e.preventDefault()
       const h = hits[active]
       if (h) navigate({ to: `/doc/${h.id}` })
+    } else if (e.key === 'Escape') {
+      // Clear results focus; keep query intact
+      setActive(0)
     }
   }
+
+  React.useEffect(() => {
+    // Ensure active item is scrolled into view when navigating with keyboard
+    const el = listRef.current?.querySelector<HTMLElement>(`#hit-${active}`)
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [active])
 
   return (
     <main className="p-6 space-y-4" onKeyDown={onKeyDown}>
@@ -59,9 +69,17 @@ function Search() {
       <div className="text-sm text-gray-600" aria-live="polite">
         {hits.length ? `${hits.length} results` : loading ? 'Searching…' : 'No results'}
       </div>
-      <ul className="space-y-3">
+      <ul className="space-y-3" role="listbox" aria-label="Search results" aria-activedescendant={`hit-${active}`} ref={listRef}>
         {hits.map((h, i) => (
-          <li key={h.id} className={`border rounded p-3 ${i === active ? 'ring-2 ring-blue-500' : ''}`} tabIndex={0} aria-selected={i === active}>
+          <li
+            id={`hit-${i}`}
+            key={h.id}
+            role="option"
+            className={`border rounded p-3 ${i === active ? 'ring-2 ring-blue-500' : ''}`}
+            tabIndex={-1}
+            aria-selected={i === active}
+            onMouseEnter={() => setActive(i)}
+          >
             <Link
               to={`/doc/${h.id}`}
               className="font-medium"
