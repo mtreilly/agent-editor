@@ -247,3 +247,78 @@ pub async fn graph_neighbors(doc_id: String, depth: Option<u8>, db: State<'_, st
     for r in rows { out.push(r.map_err(|e| e.to_string())?) }
     Ok(out)
 }
+
+// -------- AI Run ---------
+#[derive(serde::Deserialize, Clone)]
+pub struct AiRunRequest {
+    pub provider: String,
+    pub doc_id: String,
+    pub anchor_id: Option<String>,
+    pub line: Option<usize>,
+    pub prompt: String,
+}
+
+#[tauri::command]
+pub async fn ai_run(provider: String, doc_id: String, anchor_id: Option<String>, prompt: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let req = AiRunRequest { provider, doc_id, anchor_id, line: None, prompt };
+    ai_run_core(&db, req)
+}
+
+pub fn ai_run_core(db: &std::sync::Arc<Db>, req: AiRunRequest) -> Result<serde_json::Value, String> {
+    // Fetch body
+    let conn = db.0.lock();
+    let body: String = conn.query_row(
+        "SELECT body FROM doc_fts WHERE rowid=(SELECT rowid FROM doc WHERE id=?1 OR slug=?1)",
+        rusqlite::params![req.doc_id],
+        |r| r.get(0),
+    ).map_err(|e| e.to_string())?;
+    drop(conn);
+
+    // Determine target line
+    let mut line = req.line.unwrap_or(1);
+    if let Some(aid) = &req.anchor_id {
+        if let Some(parsed) = parse_anchor_line(aid) { line = parsed; }
+    }
+
+    let context = extract_context(&body, line, 12);
+    let redacted = redact(&context);
+
+    // Simulated provider response (echo)
+    let response_text = format!("[{}]\nPrompt: {}\n---\n{}", req.provider, req.prompt, redacted);
+
+    // Persist ai_trace
+    let conn = db.0.lock();
+    let trace_id = uuid::Uuid::new_v4().to_string();
+    let request_json = serde_json::json!({"prompt": req.prompt, "context": redacted});
+    let response_json = serde_json::json!({"text": response_text});
+    conn.execute(
+        "INSERT INTO ai_trace(id,repo_id,doc_id,anchor_id,provider,request,response,input_tokens,output_tokens,cost_usd) VALUES(?, (SELECT repo_id FROM doc WHERE id=?2 OR slug=?2), ?2, ?, ?, ?, ?, 0, 0, 0.0)",
+        rusqlite::params![trace_id, req.doc_id, req.anchor_id.unwrap_or_default(), req.provider, request_json.to_string(), response_json.to_string()],
+    ).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"trace_id": trace_id, "text": response_text}))
+}
+
+fn parse_anchor_line(anchor_id: &str) -> Option<usize> {
+    // Expected formats: anc_<doc>_<line> or anc_<doc>_<line>_<ver>
+    let parts: Vec<&str> = anchor_id.split('_').collect();
+    if parts.len() >= 3 {
+        parts[parts.len()-2].parse::<usize>().ok().or_else(|| parts.last()?.parse::<usize>().ok())
+    } else { None }
+}
+
+fn extract_context(body: &str, line: usize, n: usize) -> String {
+    let lines: Vec<&str> = body.lines().collect();
+    if lines.is_empty() { return String::new(); }
+    let idx = if line == 0 { 0 } else { line - 1 };
+    let start = idx.saturating_sub(n);
+    let end = (idx + n + 1).min(lines.len());
+    lines[start..end].join("\n")
+}
+
+fn redact(s: &str) -> String {
+    let mut out = s.to_string();
+    // simple patterns
+    out = out.replace("AKIA", "****");
+    out = out.replace("api_key", "****");
+    out
+}

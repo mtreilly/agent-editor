@@ -206,6 +206,12 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             for r in rows { out.push(r.map_err(|e| e.to_string())?) }
             Ok(serde_json::json!(out))
         }
+        "ai_run" => {
+            #[derive(Deserialize)] struct P { provider: String, doc_id: String, anchor_id: Option<String>, prompt: String }
+            let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
+            let res = crate::commands::AiRunRequest { provider: p.provider, doc_id: p.doc_id, anchor_id: p.anchor_id, line: None, prompt: p.prompt };
+            crate::commands::ai_run_core(&db, res)
+        }
         m => Err(format!("unknown method: {}", m)),
     }
 }

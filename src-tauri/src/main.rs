@@ -35,6 +35,7 @@ fn main() {
             commands::docs_get,
             commands::docs_delete,
             commands::search,
+            commands::ai_run,
             api::serve_api_start,
         ])
         .run(ctx)
