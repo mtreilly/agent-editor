@@ -501,8 +501,8 @@ export const wikiInputRule = $inputRule(/\[\[([^\]]+)\]\]$/, (state, match, star
 - Code highlighting: Shiki (WASM in UI). Preload popular themes to hit <150ms.
 
 ## Line-Level AI Context
-- Decorations: ProseMirror decoration set with invisible `anchorMark` spans, IDs `anc_{docId}_{lStart}_{verShort}`.
-- Persistence: anchors stored as rows in `provenance` (`entity_type='anchor'`) and encoded in `ai_trace.anchor_id`.
+- Decorations: ProseMirror decoration set with invisible `anchorMark` spans, IDs `anc_{docId}_{line}_{tsShort}`; zero‑width insertion to avoid layout shift.
+- Persistence: anchors stored in `provenance` (`entity_type='anchor'`, `entity_id=<anchor_id>`, `meta: { doc_id, line }`). `ai_trace.anchor_id` references the ID.
 - Context assembly:
   - Include N=12 lines around anchor; expand to enclosing fenced blocks or heading section; cap 2KB tokens by ellipsizing middle.
   - Include linked defs if anchor inside code fence and linkable identifier found.
@@ -609,27 +609,22 @@ export default plugin
   3) For each file, compute slug: kebab-case of relative path without extension.
   4) If new or modified (mtime/hash), upsert `folder`, `doc`, `doc_blob`, `doc_version`.
   5) Enqueue parse for links; update `link` table; triggers update backlink counts.
-  6) Start `notify` watcher; debounce 200ms; repeat for changes.
+  6) Start `notify` watcher (optional `--watch`); debounce 200–300ms; repeat for changes.
 
 ### Pseudocode + Tauri signature
 ```rust
-// src-tauri/src/scan.rs
-use serde::{Deserialize, Serialize};
-use tauri::State;
-
 #[derive(Deserialize)]
 pub struct ScanFilters { pub include: Vec<String>, pub exclude: Vec<String> }
 
 #[derive(Serialize)]
-pub struct ScanJobReport { pub job_id: String, pub files_scanned: u64, pub docs_added: u64, pub errors: u64 }
+pub struct ScanJobReport { pub job_id: String, pub files_scanned: i64, pub docs_added: i64, pub errors: i64 }
 
 #[tauri::command]
-pub async fn scan_repo(repo_path: String, filters: Option<ScanFilters>, state: State<AppState>) -> Result<ScanJobReport, String> {
-    // 1) insert scan_job
-    // 2) walkdir with ignore
-    // 3) update db in txn batches
-    // 4) return report
-    Ok(ScanJobReport { job_id: "job_1".into(), files_scanned: 0, docs_added: 0, errors: 0 })
+pub async fn scan_repo(repo_path: String, filters: Option<ScanFilters>, watch: Option<bool>, debounce: Option<u64>) -> Result<ScanJobReport, String> {
+    // 1) insert scan_job (running)
+    // 2) initial scan via ignore + walkdir; upsert rows; update FTS; compute stats
+    // 3) update scan_job (success) + stats
+    // 4) if watch: spawn notify watcher with debounce; emit `progress.scan` events
 }
 ```
 
@@ -678,48 +673,78 @@ SELECT path FROM q WHERE json_extract(path, '$[#-1]') = :end_id LIMIT 1;
 ### Cached materialized views and invalidation
 - `doc_stats(doc_id, backlinks, outlinks, updated_at)` maintained by triggers on `link`.
 - Invalidate on `link` insert/delete.
+ 
+### Return types
+- GraphDoc: `{ id: string; slug: string; title: string }`
+- IPC/JSON-RPC: `graph_neighbors(doc_id, depth?) -> GraphDoc[]`, `graph_backlinks(doc_id) -> GraphDoc[]`
 
 ## Tauri 2 IPC + Frontend Contracts
 
 ### Rust commands (signatures)
 ```rust
-// src-tauri/src/lib.rs
-#[tauri::command] async fn repos_add(path: String) -> Result<String, String>;
-#[tauri::command] async fn scan_repo(repo_path: String, filters: Option<ScanFilters>) -> Result<ScanJobReport, String>;
-#[tauri::command] async fn docs_create(repo_id: String, folder_id: String, title: String, body: String) -> Result<String, String>;
-#[tauri::command] async fn docs_update(doc_id: String, body: String, message: Option<String>) -> Result<String, String>;
-#[tauri::command] async fn search(repo_id: String, query: String, limit: i64, offset: i64) -> Result<Vec<SearchHit>, String>;
-#[tauri::command] async fn graph_neighbors(doc_id: String, depth: u8) -> Result<Vec<String>, String>;
-#[tauri::command] async fn ai_run(provider: String, doc_id: String, anchor_id: String, prompt: String) -> Result<String, String>;
-#[tauri::command] async fn plugins_list() -> Result<Vec<PluginInfo>, String>;
-#[tauri::command] async fn plugins_call(name: String, method: String, params: String) -> Result<String, String>;
+#[tauri::command] async fn repos_add(path: String, name: Option<String>, include: Option<Vec<String>>, exclude: Option<Vec<String>>) -> Result<serde_json::Value, String>;
+#[tauri::command] async fn repos_list() -> Result<Vec<serde_json::Value>, String>;
+#[tauri::command] async fn repos_info(id_or_name: String) -> Result<serde_json::Value, String>;
+#[tauri::command] async fn repos_remove(id_or_name: String) -> Result<serde_json::Value, String>;
+#[tauri::command] async fn scan_repo(repo_path: String, filters: Option<ScanFilters>, watch: Option<bool>, debounce: Option<u64>) -> Result<ScanJobReport, String>;
+
+#[derive(Deserialize)] struct DocCreate { repo_id: String, slug: String, title: String, body: String }
+#[tauri::command] async fn docs_create(payload: DocCreate) -> Result<serde_json::Value, String>;
+#[derive(Deserialize)] struct DocUpdate { doc_id: String, body: String, message: Option<String> }
+#[tauri::command] async fn docs_update(payload: DocUpdate) -> Result<serde_json::Value, String>;
+#[tauri::command] async fn docs_get(doc_id: String, content: Option<bool>) -> Result<serde_json::Value, String>;
+#[tauri::command] async fn docs_delete(doc_id: String) -> Result<serde_json::Value, String>;
+
+#[derive(Serialize)] struct SearchHit { id: String, slug: String, title_snip: String, body_snip: String, rank: f64 }
+#[tauri::command] async fn search(repo_id: Option<String>, query: String, limit: Option<i64>, offset: Option<i64>) -> Result<Vec<SearchHit>, String>;
+
+#[derive(Serialize)] struct GraphDoc { id: String, slug: String, title: String }
+#[tauri::command] async fn graph_neighbors(doc_id: String, depth: Option<u8>) -> Result<Vec<GraphDoc>, String>;
+#[tauri::command] async fn graph_backlinks(doc_id: String) -> Result<Vec<GraphDoc>, String>;
+
+#[tauri::command] async fn ai_run(provider: String, doc_id: String, anchor_id: Option<String>, prompt: String) -> Result<serde_json::Value, String>;
+#[tauri::command] async fn anchors_upsert(doc_id: String, anchor_id: String, line: i64) -> Result<serde_json::Value, String>;
+#[tauri::command] async fn serve_api_start(port: Option<u16>) -> Result<(), String>;
 ```
 
 ### TS client wrappers
 ```ts
 // src/ipc/client.ts
 import { invoke } from '@tauri-apps/api/tauri'
-export const reposAdd = (path: string) => invoke<string>('repos_add', { path })
-export const scanRepo = (repoPath: string, filters?: { include: string[]; exclude: string[] }) =>
-  invoke('scan_repo', { repoPath, filters })
-export const docsCreate = (repoId: string, folderId: string, title: string, body: string) =>
-  invoke<string>('docs_create', { repoId, folderId, title, body })
-export const docsUpdate = (docId: string, body: string, message?: string) =>
-  invoke<string>('docs_update', { docId, body, message })
-export const search = (repoId: string, query: string, limit = 50, offset = 0) =>
-  invoke<any>('search', { repoId, query, limit, offset })
-export const graphNeighbors = (docId: string, depth = 1) => invoke<string[]>('graph_neighbors', { docId, depth })
-export const aiRun = (provider: string, docId: string, anchorId: string, prompt: string) =>
-  invoke<string>('ai_run', { provider, docId, anchorId, prompt })
-export const pluginsList = () => invoke<any[]>('plugins_list')
-export const pluginsCall = (name: string, method: string, params: unknown) =>
-  invoke<string>('plugins_call', { name, method, params: JSON.stringify(params) })
+export const reposAdd = (path: string, name?: string, include?: string[], exclude?: string[]) =>
+  invoke<{ repo_id: string }>('repos_add', { path, name, include, exclude })
+export const reposList = () => invoke<Array<{ id: string; name: string; path: string }>>('repos_list')
+export const reposInfo = (id_or_name: string) => invoke<any>('repos_info', { idOrName: id_or_name })
+export const reposRemove = (id_or_name: string) => invoke<{ removed: boolean }>('repos_remove', { idOrName: id_or_name })
+
+export const scanRepo = (repoPath: string, filters?: { include?: string[]; exclude?: string[] }, watch?: boolean, debounce?: number) =>
+  invoke<{ job_id: string; files_scanned: number; docs_added: number; errors: number }>('scan_repo', { repoPath, filters, watch, debounce })
+
+export const docsCreate = (repo_id: string, slug: string, title: string, body: string) =>
+  invoke<{ doc_id: string }>('docs_create', { payload: { repo_id, slug, title, body } })
+export const docsUpdate = (doc_id: string, body: string, message?: string) =>
+  invoke<{ version_id: string }>('docs_update', { payload: { doc_id, body, message } })
+export const docsGet = (doc_id: string, content?: boolean) => invoke<any>('docs_get', { docId: doc_id, content })
+export const docsDelete = (doc_id: string) => invoke<{ deleted: boolean }>('docs_delete', { docId: doc_id })
+
+export type SearchHit = { id: string; slug: string; title_snip: string; body_snip: string; rank: number }
+export const search = (query: string, repo_id?: string, limit = 50, offset = 0) =>
+  invoke<SearchHit[]>('search', { repoId: repo_id, query, limit, offset })
+
+export type GraphDoc = { id: string; slug: string; title: string }
+export const graphBacklinks = (doc_id: string) => invoke<GraphDoc[]>('graph_backlinks', { docId: doc_id })
+export const graphNeighbors = (doc_id: string, depth = 1) => invoke<GraphDoc[]>('graph_neighbors', { docId: doc_id, depth })
+
+export const aiRun = (provider: string, doc_id: string, prompt: string, anchor_id?: string) =>
+  invoke<{ trace_id: string; text: string }>('ai_run', { provider, docId: doc_id, anchorId: anchor_id, prompt })
+export const anchorsUpsert = (doc_id: string, anchor_id: string, line: number) =>
+  invoke<{ ok: boolean }>('anchors_upsert', { docId: doc_id, anchorId: anchor_id, line })
 ```
 
 - Error model: commands return `Result<Ok, ErrString>`. Error strings are structured JSON: `{ code, message, details }`. Long ops stream progress via `tauri::async_runtime::spawn` and window `emit("progress.scan", {...})`.
 
 ## Routing (TanStack Start)
-- Routes: `/` (home), `/search`, `/doc/:slug`, `/repo/:name`, `/settings`, `/plugins`, `/graph`
+- Routes: `/` (home), `/search`, `/doc/:id`, `/repo`, `/settings`, `/plugins`, `/graph/:id`
 - SSR strategy:
   - Desktop: client-only hydration; data via IPC.
   - Web build (dev docs): SSR enabled for static pages; dynamic routes client-only.
@@ -731,7 +756,8 @@ export const pluginsCall = (name: string, method: string, params: unknown) =>
 - Bench plan:
   1) Dataset: 100k Markdown notes, avg 1.2KB; 10 repos mix; generate fixtures.
   2) Scenarios: cold launch, open doc, save doc, FTS prefix/phrase/boolean, neighbor graph.
-  3) Scripts: Rust criterion benches for FTS and graph; Playwright for UI timings; Go CLI for scan throughput.
+  3) Scripts: Rust criterion benches for FTS/graph; Playwright for UI timings; Go CLI for scan throughput; CLI `fts bench` for latency.
+  4) Example: `agent-editor fts bench --query "foo" --n 50 -o json`
 
 ## Security & Privacy
 - Local-first, network off by default.
@@ -742,6 +768,7 @@ export const pluginsCall = (name: string, method: string, params: unknown) =>
 ## Build/Run/Package
 - Dev: `pnpm install && pnpm dev` (starts Vite + Tauri dev)
 - Build: `pnpm build` (Vite) then `pnpm tauri build`
+- Note: Ensure a valid RGBA icon at `src-tauri/icons/icon.png`. Approve SWC/esbuild builds if prompted: `pnpm approve-builds`.
 - Test: `pnpm test`, `pnpm test:e2e`
 - Packaging:
   - Targets: `{mac_win_linux}`
