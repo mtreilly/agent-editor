@@ -19,6 +19,7 @@ Completed
  - Milkdown editor + schema for wiki-links and anchor marks
 - UI: doc graph/backlinks view; AI run with optional anchor context
  - UI: wiki-link navigation via editor; search results link to doc
+ - Search: keyboard navigation and sanitized snippets in results
 
 Exit criteria met
 - repo add/scan works end-to-end with JSON-RPC and CLI
