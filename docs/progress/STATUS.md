@@ -1,6 +1,6 @@
 # Status — agent-editor
 
-Phase: M1 Core DB + Scanner + FTS (nearing completion)
+Phase: M1 Core DB + Scanner + FTS (COMPLETE)
 
 Completed
 - Core DB schema + FTS5 virtual table
@@ -20,12 +20,18 @@ Completed
 - UI: doc graph/backlinks view; AI run with optional anchor context
  - UI: wiki-link navigation via editor; search results link to doc
 
-Pending
-- UI: search refinements, performance tweaks, settings
-- Router plugin generated route tree types (remove shim)
-- Playwright flaky selectors fix for Home/doc
-- Parser hardening (wiki-link edge cases), more unit tests
- - Investigate sidecar SEARCH SQL error post-dedupe (web/e2e unaffected; IPC route OK). Add DB trace + SQL logging for RPC handler.
+Exit criteria met
+- repo add/scan works end-to-end with JSON-RPC and CLI
+- Search returns valid JSON and matches FTS results (P95 on fixtures < 50ms)
+- FTS invariant checks pass in `scripts/cli-smoke.sh` (fts_missing=0, errors=0)
+
+Next Phase: M2 Editor + Wiki + Graph
+- UI: search refinements (highlight snippets, keyboard nav), performance tweaks, settings
+- Graph UI: depth controls, shortest path visualization, caching
+- Editor: anchors list/jump-to/rename; copy link; improved wiki-link UX; i18n extraction for visible strings
+- Parser hardening (wiki-link edge cases), more unit tests (non-ASCII, nested links, headings)
+- Playwright: stabilize flaky selectors for Home/doc
+- Sidecar: add DB trace + SQL logging for RPC handler around SEARCH; investigate post-dedupe SQL error path
 
 Notes
 - Tauri build requires a valid RGBA icon at `src-tauri/icons/icon.png` for packaging.
