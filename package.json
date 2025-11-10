@@ -26,6 +26,7 @@
     "@milkdown/utils": "^7.17.1",
     "@tanstack/react-router": "^1.135.0",
     "@tauri-apps/api": "^2.9.0",
+    "prosemirror-state": "^1.4.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.1.17"

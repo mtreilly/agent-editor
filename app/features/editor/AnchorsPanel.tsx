@@ -1,7 +1,12 @@
 import * as React from 'react'
 import * as api from '../../ipc-bridge'
+import { copyText } from '../../../src/app/clipboard'
 
-type EditorAPI = { insertAnchor: (id?: string) => { id: string; line: number } | null }
+type EditorAPI = {
+  insertAnchor: (id?: string) => { id: string; line: number } | null
+  jumpToAnchor?: (id: string) => boolean
+  anchorLinkFor?: (anchorId: string) => string
+}
 
 type Props = {
   docId: string
@@ -41,6 +46,15 @@ export function AnchorsPanel({ docId, editorApiRef }: Props) {
     setAnchors((prev) => prev.filter((a) => a.id !== id))
   }
 
+  async function jumpTo(id: string) {
+    editorApiRef.current?.jumpToAnchor?.(id)
+  }
+
+  async function copyLink(id: string) {
+    const link = editorApiRef.current?.anchorLinkFor?.(id) || `#${id}`
+    await copyText(link)
+  }
+
   return (
     <section aria-labelledby="anchors-heading" className="space-y-2">
       <div className="flex items-center justify-between">
@@ -54,7 +68,11 @@ export function AnchorsPanel({ docId, editorApiRef }: Props) {
           {anchors.map((a) => (
             <li key={a.id} className="border rounded p-2 flex items-center justify-between">
               <div className="text-sm">#{a.line} <span className="text-gray-600">{a.id}</span></div>
-              <button className="px-2 py-1 border rounded text-red-600" onClick={() => removeAnchor(a.id)} aria-label={`Remove anchor ${a.id}`}>Remove</button>
+              <div className="flex items-center gap-2">
+                <button className="px-2 py-1 border rounded" onClick={() => jumpTo(a.id)} aria-label={`Jump to anchor ${a.id}`}>Jump</button>
+                <button className="px-2 py-1 border rounded" onClick={() => copyLink(a.id)} aria-label={`Copy link ${a.id}`}>Copy Link</button>
+                <button className="px-2 py-1 border rounded text-red-600" onClick={() => removeAnchor(a.id)} aria-label={`Remove anchor ${a.id}`}>Remove</button>
+              </div>
             </li>
           ))}
           {!anchors.length && <li className="text-sm text-gray-600">No anchors</li>}
@@ -63,4 +81,3 @@ export function AnchorsPanel({ docId, editorApiRef }: Props) {
     </section>
   )
 }
-

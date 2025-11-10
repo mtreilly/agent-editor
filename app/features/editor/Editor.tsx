@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Milkdown, useEditor } from '@milkdown/react'
 import { Editor as MilkEditor, rootCtx, defaultValueCtx, editorViewCtx } from '@milkdown/core'
+import { TextSelection } from 'prosemirror-state'
 import { gfm } from '@milkdown/preset-gfm'
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
 import { wikiLink, anchorMark } from '../../../src/editor/schema/wiki'
@@ -9,11 +10,19 @@ type Props = {
   value: string
   onChange?: (md: string) => void
   docId?: string
-  onReady?: (api: { insertAnchor: (id?: string) => { id: string; line: number } | null }) => void
+  onReady?: (api: {
+    insertAnchor: (id?: string) => { id: string; line: number } | null
+    jumpToAnchor: (id: string) => boolean
+    anchorLinkFor: (anchorId: string) => string
+  }) => void
 }
 
 export function Editor({ value, onChange, docId, onReady }: Props) {
-  const apiRef = React.useRef<{ insertAnchor: (id?: string) => { id: string; line: number } | null } | null>(null)
+  const apiRef = React.useRef<{
+    insertAnchor: (id?: string) => { id: string; line: number } | null
+    jumpToAnchor: (id: string) => boolean
+    anchorLinkFor: (anchorId: string) => string
+  } | null>(null)
   useEditor((root) => {
     return MilkEditor.make()
       .config((ctx) => {
@@ -37,7 +46,28 @@ export function Editor({ value, onChange, docId, onReady }: Props) {
           dispatch(tr)
           return { id: anchorId, line }
         }
-        apiRef.current = { insertAnchor }
+        const jumpToAnchor = (anchorId: string) => {
+          const view = ctx.get(editorViewCtx)
+          const { state } = view
+          const markType = state.schema.marks['anchor']
+          if (!markType) return false
+          let foundPos: number | null = null
+          state.doc.descendants((node, pos) => {
+            if (node.isText && node.marks?.some((m) => m.type === markType && m.attrs?.id === anchorId)) {
+              foundPos = pos
+              return false
+            }
+            return true
+          })
+          if (foundPos != null) {
+            const tr = state.tr.setSelection(TextSelection.create(state.doc, foundPos)).scrollIntoView()
+            view.dispatch(tr)
+            return true
+          }
+          return false
+        }
+        const anchorLinkFor = (anchorId: string) => `/doc/${docId || ''}?anchor=${encodeURIComponent(anchorId)}`
+        apiRef.current = { insertAnchor, jumpToAnchor, anchorLinkFor }
         onReady?.(apiRef.current)
       })
       .use(gfm)
