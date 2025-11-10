@@ -10,12 +10,14 @@ Completed
 - Scanner pass: .gitignore-aware, imports *.md into DB with versions and FTS
 - Wiki-link extraction: populate `link` on create/update and during scan
  - Graph APIs: neighbors/backlinks exposed over IPC/JSON-RPC and integrated in CLI/UI
+ - Watcher-based incremental scan (notify) with debounce + progress events
+ - Milkdown editor + schema for wiki-links and anchor marks
+ - UI: doc graph/backlinks view; AI run with optional anchor context
 
 Pending
-- Watcher-based incremental scan (notify) and debounced updates
-- Milkdown editor + schema for wiki-links/anchors
 - Graph APIs path/related
-- UI: doc graph/backlinks view, search refinements
+- UI: search refinements, performance tweaks, settings
 
 Notes
 - Tauri build requires a valid RGBA icon at `src-tauri/icons/icon.png` for packaging.
+ - Approve SWC/esbuild builds with `pnpm approve-builds` if prompted.
