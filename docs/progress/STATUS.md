@@ -9,11 +9,12 @@ Completed
 - Initial UI routes (home, search, repo, doc)
 - Scanner pass: .gitignore-aware, imports *.md into DB with versions and FTS
 - Wiki-link extraction: populate `link` on create/update and during scan
+ - Graph APIs: neighbors/backlinks exposed over IPC/JSON-RPC and integrated in CLI/UI
 
 Pending
 - Watcher-based incremental scan (notify) and debounced updates
 - Milkdown editor + schema for wiki-links/anchors
-- Graph APIs (neighbors/path/related) exposed over IPC/RPC
+- Graph APIs path/related
 - UI: doc graph/backlinks view, search refinements
 
 Notes
