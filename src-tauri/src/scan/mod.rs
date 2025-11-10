@@ -45,7 +45,7 @@ fn upsert_doc(db: &Db, repo_root: &Path, file_path: &Path) -> Result<bool, Strin
     let slug = make_slug(repo_root, file_path);
     let size = content.len() as i64;
     let lines = content.lines().count() as i64;
-    let conn = db.0.lock();
+    let mut conn = db.0.lock();
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 
     // Ensure repo exists and get id by path

@@ -6,7 +6,7 @@ node scripts/dev-check.mjs || { echo "Start desktop dev: pnpm dev"; exit 1; }
 
 echo "[SMOKE] Building CLI"
 pushd cli >/dev/null
-GOFLAGS="" go build -o agent-editor
+GOFLAGS="" go build -o agent-editor ./cmd/agent-editor
 CLI_BIN="$(pwd)/agent-editor"
 popd >/dev/null
 
@@ -32,4 +32,3 @@ if [[ -n "${FIRST_ID:-}" ]]; then
 fi
 
 echo "[SMOKE] Done. Temp repo: $TMP_REPO"
-

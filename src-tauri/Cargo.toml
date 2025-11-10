@@ -28,3 +28,7 @@ lto = true
 opt-level = "s"
 panic = "abort"
 strip = true
+
+[[bin]]
+name = "rpc_sidecar"
+path = "src/bin/rpc_sidecar.rs"
