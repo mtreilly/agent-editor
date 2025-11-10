@@ -271,6 +271,17 @@ pnpm preview                      # Preview production build
 - Start server: `fangagent serve` (separate terminal)
 - Verify UI changes with fangagent
 
+## Terminal Orchestration (tmux — Mandatory)
+- Always run long‑lived commands in separate tmux panes for observability:
+  - Pane A: JSON‑RPC sidecar (`cargo run --manifest-path src-tauri/Cargo.toml --bin rpc_sidecar`)
+  - Pane B: Web dev server (`pnpm dev:web`) or Tauri (`pnpm dev`)
+  - Pane C: CLI smoke/benches (`bash scripts/cli-smoke.sh`, `scripts/bench-fts.sh`)
+  - Pane D: Logs (`tail -f ./.sidecar.log`)
+- Use provided scripts:
+  - `pnpm tmux:dev` — sets up a 2x2 tmux layout with the above panes
+  - `pnpm tmux:smoke` — sidecar + CLI smoke
+- If tmux is unavailable, install it or run an equivalent multi‑pane terminal.
+
 ## Multi-Agent Collaboration
 - Git worktrees for parallel branches
 - Independent dev servers on different ports

@@ -24,6 +24,14 @@ echo "[SMOKE] repo scan $TMP_REPO"
 echo "[SMOKE] search 'Hello'"
 "$CLI_BIN" doc search Hello -o json || true
 
+echo "[SMOKE] FTS stats"
+STATS=$("$CLI_BIN" fts stats -o json || true)
+echo "$STATS"
+COUNT=$(echo "$STATS" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{let j=JSON.parse(d);console.log(j.fts_count||0)}catch{console.log(0)}})" )
+if [ "${COUNT:-0}" -eq 0 ]; then
+  echo "[SMOKE] FTS count is zero (expected >0 if scan succeeded)" >&2
+fi
+
 echo "[SMOKE] graph backlinks (should be empty for new docs)"
 FIRST_ID=$("$CLI_BIN" doc search Hello -o json | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -n1)
 if [[ -n "${FIRST_ID:-}" ]]; then

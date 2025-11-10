@@ -273,6 +273,24 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             let n = conn.execute("DELETE FROM provenance WHERE entity_type='anchor' AND entity_id=?1", params![p.anchor_id]).map_err(|e| e.to_string())?;
             Ok(serde_json::json!({"deleted": n>0}))
         }
+        "fts_stats" => {
+            let conn = db.0.lock();
+            let doc_count: i64 = conn.query_row("SELECT COUNT(*) FROM doc WHERE is_deleted=0", [], |r| r.get(0)).unwrap_or(0);
+            let fts_count: i64 = conn.query_row("SELECT COUNT(*) FROM doc_fts", [], |r| r.get(0)).unwrap_or(0);
+            let missing: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM doc d LEFT JOIN doc_fts f ON f.rowid = d.rowid WHERE d.is_deleted=0 AND f.rowid IS NULL",
+                [],
+                |r| r.get(0),
+            ).unwrap_or(0);
+            let last_update: Option<String> = conn.query_row("SELECT MAX(updated_at) FROM doc", [], |r| r.get(0)).ok();
+            Ok(serde_json::json!({"doc_count": doc_count, "fts_count": fts_count, "fts_missing": missing, "last_update": last_update}))
+        }
+        "scan_file" => {
+            #[derive(Deserialize)] struct P { repo_path: String, file_path: String }
+            let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
+            let added = crate::scan::scan_one_file(&db, &p.repo_path, &p.file_path)?;
+            Ok(serde_json::json!({"changed": added}))
+        }
         m => Err(format!("unknown method: {}", m)),
     }
 }

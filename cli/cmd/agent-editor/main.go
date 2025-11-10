@@ -214,7 +214,13 @@ func ftsCmd() *cobra.Command {
     bench.Flags().Int("n", 50, "number of runs")
     bench.Flags().Int("warmup", 5, "warmup runs")
     bench.Flags().String("repo", "", "optional repo id")
-    cmd.AddCommand(query, bench)
+    stats := &cobra.Command{Use: "stats", RunE: func(cmd *cobra.Command, args []string) error {
+        c, _ := clientFromConfig()
+        var res map[string]any
+        if err := c.Call(context.TODO(), "fts_stats", nil, &res); err != nil { return err }
+        return out.Print(res, outputFormat)
+    }}
+    cmd.AddCommand(query, bench, stats)
     return cmd
 }
 

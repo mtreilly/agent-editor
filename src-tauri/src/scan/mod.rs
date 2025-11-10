@@ -41,6 +41,15 @@ pub fn scan_once(db: &Db, repo_path: &str, include: &[String], exclude: &[String
     Ok(stats)
 }
 
+/// Scan a single file path (absolute) under a given repo_root (absolute).
+pub fn scan_one_file(db: &Db, repo_root: &str, file_path: &str) -> Result<bool, String> {
+    let root = PathBuf::from(repo_root);
+    let fp = PathBuf::from(file_path);
+    if !fp.exists() { return Err("file not found".into()); }
+    if fp.extension().and_then(|s| s.to_str()).unwrap_or("") != "md" { return Ok(false); }
+    upsert_doc(db, &root, &fp)
+}
+
 fn upsert_doc(db: &Db, repo_root: &Path, file_path: &Path) -> Result<bool, String> {
     let content = fs::read_to_string(file_path).map_err(|e| e.to_string())?;
     let content_hash = blake3::hash(content.as_bytes()).to_hex().to_string();

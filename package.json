@@ -14,7 +14,9 @@
     "dev:check": "node scripts/dev-check.mjs",
     "tauri:build": "pnpm build && pnpm tauri build",
     "test:e2e": "playwright test",
-    "smoke:cli": "bash scripts/cli-smoke.sh"
+    "smoke:cli": "bash scripts/cli-smoke.sh",
+    "tmux:dev": "bash scripts/tmux-dev.sh",
+    "tmux:smoke": "bash scripts/tmux-smoke.sh"
   },
   "dependencies": {
     "@milkdown/core": "^7.17.1",
