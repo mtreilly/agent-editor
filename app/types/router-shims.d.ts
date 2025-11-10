@@ -1,5 +1,5 @@
 declare module '@tanstack/react-router' {
-  // Augment to allow path overload in file-route helpers for our setup
+  // Minimal shim until the plugin exposes typings for file-route helpers in our setup.
   export function createFileRoute<TPath extends string = string>(path: TPath): any
 }
 
