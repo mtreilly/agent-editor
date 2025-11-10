@@ -14,6 +14,7 @@ function DocPage() {
   const [saving, setSaving] = React.useState(false)
   const [prompt, setPrompt] = React.useState('Explain this section')
   const [aiOut, setAiOut] = React.useState('')
+  const [lastAnchor, setLastAnchor] = React.useState<{ id: string; line: number } | null>(null)
 
   const editorApiRef = React.useRef<{ insertAnchor: (id?: string) => { id: string; line: number } | null } | null>(null)
 
@@ -48,6 +49,7 @@ function DocPage() {
     const created = editorApiRef.current.insertAnchor?.()
     if (created) {
       await api.anchorsUpsert(doc.id, created.id, created.line)
+      setLastAnchor(created)
     }
   }
 
@@ -61,11 +63,19 @@ function DocPage() {
       <div>
         <button className="px-3 py-2 bg-black text-white rounded" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
         <button className="ml-2 px-3 py-2 border rounded" onClick={insertAnchor}>Insert Anchor</button>
+        {lastAnchor && (
+          <span className="ml-3 text-xs text-gray-600">Last anchor: {lastAnchor.id} (line {lastAnchor.line})</span>
+        )}
       </div>
       <div className="space-y-2">
         <div className="flex gap-2">
           <input className="border rounded px-3 py-2 w-full" placeholder="Prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} />
           <button className="px-3 py-2 border rounded" onClick={runAI}>Run AI</button>
+          <button className="px-3 py-2 border rounded" onClick={async () => {
+            if (!doc || !lastAnchor) return
+            const res = await api.aiRun('local', doc.id, prompt, lastAnchor.id)
+            setAiOut(res.text)
+          }} disabled={!lastAnchor}>Run AI @Anchor</button>
         </div>
         {aiOut && (
           <pre className="border rounded p-3 whitespace-pre-wrap text-sm">{aiOut}</pre>
