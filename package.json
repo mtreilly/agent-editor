@@ -11,7 +11,8 @@
     "check": "tsc --noEmit",
     "tauri": "tauri",
     "dev:check": "node scripts/dev-check.mjs",
-    "tauri:build": "pnpm build && pnpm tauri build"
+    "tauri:build": "pnpm build && pnpm tauri build",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@milkdown/core": "^7.17.1",
@@ -26,6 +27,7 @@
     "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/router-vite-plugin": "^1.135.0",
     "@tauri-apps/cli": "^2.9.4",
