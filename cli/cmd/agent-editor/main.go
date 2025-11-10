@@ -12,6 +12,7 @@ import (
     cfgpkg "github.com/agent-editor/agent-editor/cli/internal/config"
     out "github.com/agent-editor/agent-editor/cli/internal/output"
     rpc "github.com/agent-editor/agent-editor/cli/internal/rpc"
+    "sort"
 )
 
 var (
@@ -158,7 +159,62 @@ func ftsCmd() *cobra.Command {
         if err := c.Call(context.TODO(), "search", map[string]any{"query": args[0], "limit": 50, "offset": 0}, &res); err != nil { return err }
         return out.Print(res, outputFormat)
     }}
-    cmd.AddCommand(query)
+    // bench: run many search calls and report latency stats
+    bench := &cobra.Command{Use: "bench", Short: "Benchmark FTS query latency", RunE: func(cmd *cobra.Command, args []string) error {
+        c, _ := clientFromConfig()
+        q, _ := cmd.Flags().GetString("query")
+        n, _ := cmd.Flags().GetInt("n")
+        warm, _ := cmd.Flags().GetInt("warmup")
+        repo, _ := cmd.Flags().GetString("repo")
+        if q == "" { return fmt.Errorf("--query is required") }
+        // warmup
+        for i := 0; i < warm; i++ {
+            var tmp []map[string]any
+            _ = c.Call(context.TODO(), "search", map[string]any{"query": q, "repo_id": repo, "limit": 5, "offset": 0}, &tmp)
+        }
+        // measure
+        durs := make([]time.Duration, 0, n)
+        errCount := 0
+        for i := 0; i < n; i++ {
+            start := time.Now()
+            var tmp []map[string]any
+            if err := c.Call(context.TODO(), "search", map[string]any{"query": q, "repo_id": repo, "limit": 5, "offset": 0}, &tmp); err != nil { errCount++ }
+            durs = append(durs, time.Since(start))
+        }
+        // stats
+        ms := make([]float64, 0, len(durs))
+        var sum float64
+        var min, max float64
+        for i, d := range durs {
+            v := float64(d.Microseconds()) / 1000.0
+            ms = append(ms, v)
+            sum += v
+            if i == 0 || v < min { min = v }
+            if i == 0 || v > max { max = v }
+        }
+        sort.Float64s(ms)
+        mean := 0.0
+        if len(ms) > 0 { mean = sum / float64(len(ms)) }
+        p := func(pct float64) float64 { if len(ms) == 0 { return 0 }; idx := int(pct*float64(len(ms)-1) + 0.5); if idx < 0 { idx = 0 }; if idx >= len(ms) { idx = len(ms)-1 }; return ms[idx] }
+        res := map[string]any{
+            "runs": n,
+            "errors": errCount,
+            "mean_ms": mean,
+            "min_ms": min,
+            "p50_ms": p(0.50),
+            "p95_ms": p(0.95),
+            "p99_ms": p(0.99),
+            "max_ms": max,
+            "query": q,
+            "repo": repo,
+        }
+        return out.Print(res, outputFormat)
+    }}
+    bench.Flags().String("query", "", "query to run")
+    bench.Flags().Int("n", 50, "number of runs")
+    bench.Flags().Int("warmup", 5, "warmup runs")
+    bench.Flags().String("repo", "", "optional repo id")
+    cmd.AddCommand(query, bench)
     return cmd
 }
 
@@ -197,4 +253,3 @@ func versionCmd() *cobra.Command {
         return out.Print(map[string]string{"version": "0.0.0"}, outputFormat)
     }}
 }
-

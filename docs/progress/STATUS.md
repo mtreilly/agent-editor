@@ -11,8 +11,9 @@ Completed
 - Wiki-link extraction: populate `link` on create/update and during scan
  - Graph APIs: neighbors/backlinks/related/path exposed over IPC/JSON-RPC and integrated in CLI/UI
  - Watcher-based incremental scan (notify) with debounce + progress events
- - Headless JSON-RPC sidecar for dev automation
- - RPC scan_repo wired to real scanner (CLI parity)
+- Headless JSON-RPC sidecar for dev automation
+- RPC scan_repo wired to real scanner (CLI parity)
+- CLI: FTS bench command (`fts bench`) + script `scripts/bench-fts.sh`
  - Milkdown editor + schema for wiki-links and anchor marks
 - UI: doc graph/backlinks view; AI run with optional anchor context
  - UI: wiki-link navigation via editor; search results link to doc
@@ -20,7 +21,8 @@ Completed
 Pending
 - UI: search refinements, performance tweaks, settings
 - Router plugin generated route tree types (remove shim)
- - Playwright flaky selectors fix for Home/doc
+- Playwright flaky selectors fix for Home/doc
+ - Parser hardening (wiki-link edge cases), more unit tests
 
 Notes
 - Tauri build requires a valid RGBA icon at `src-tauri/icons/icon.png` for packaging.
