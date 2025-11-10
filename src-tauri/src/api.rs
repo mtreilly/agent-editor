@@ -196,11 +196,13 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             if !primary_ok {
                 // Fallback without bm25/snippet to avoid env-specific FTS aux function issues
                 let simple = String::from("SELECT d.id, d.slug, 0.0 as rank, '' as title_snip, '' as body_snip FROM doc_fts JOIN doc d ON d.rowid=doc_fts.rowid WHERE doc_fts MATCH ?1 AND (?2 IS NULL OR d.repo_id=?2) ORDER BY d.updated_at DESC LIMIT ?3 OFFSET ?4");
-                let mut stmt2 = conn.prepare(&simple).map_err(|e| e.to_string())?;
-                let rows2 = stmt2.query_map(params![p.query, p.repo_id, lim, off], |r| Ok(serde_json::json!({
-                    "id": r.get::<_, String>(0)?, "slug": r.get::<_, String>(1)?, "rank": r.get::<_, f64>(2).unwrap_or(0.0), "title_snip": r.get::<_, String>(3).unwrap_or_default(), "body_snip": r.get::<_, String>(4).unwrap_or_default()
-                }))).map_err(|e| e.to_string())?;
-                for r in rows2 { out.push(r.map_err(|e| e.to_string())?) }
+                if let Ok(mut stmt2) = conn.prepare(&simple) {
+                    if let Ok(rows2) = stmt2.query_map(params![p.query, p.repo_id, lim, off], |r| Ok(serde_json::json!({
+                        "id": r.get::<_, String>(0)?, "slug": r.get::<_, String>(1)?, "rank": r.get::<_, f64>(2).unwrap_or(0.0), "title_snip": r.get::<_, String>(3).unwrap_or_default(), "body_snip": r.get::<_, String>(4).unwrap_or_default()
+                    }))) {
+                        for r in rows2 { if let Ok(v) = r { out.push(v) } }
+                    }
+                }
             }
             Ok(serde_json::json!(out))
         }

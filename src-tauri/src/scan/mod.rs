@@ -22,6 +22,7 @@ pub fn scan_once(db: &Db, repo_path: &str, include: &[String], exclude: &[String
     walker.hidden(true).git_ignore(true).git_global(true).git_exclude(true).overrides(overrides);
     let walker = walker.build();
 
+    let debug = std::env::var("AE_DEBUG_SCAN").ok().map(|v| v=="1" || v.eq_ignore_ascii_case("true")).unwrap_or(false);
     for res in walker {
         match res {
             Ok(entry) => {
@@ -31,7 +32,7 @@ pub fn scan_once(db: &Db, repo_path: &str, include: &[String], exclude: &[String
                 stats.files_scanned += 1;
                 match upsert_doc(&db, &repo_path, path) {
                     Ok(added) => if added { stats.docs_added += 1; },
-                    Err(_) => stats.errors += 1,
+                    Err(e) => { if debug { eprintln!("[scan] upsert error for {}: {}", path.display(), e); } stats.errors += 1; },
                 }
             }
             Err(_) => stats.errors += 1,
