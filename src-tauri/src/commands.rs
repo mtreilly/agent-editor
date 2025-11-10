@@ -1,5 +1,6 @@
 use crate::{db::Db, scan};
 use tauri::Emitter;
+use serde::Serialize;
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -210,5 +211,39 @@ pub async fn search(repo_id: Option<String>, query: String, limit: Option<i64>, 
         }).map_err(|e| e.to_string())?;
         for r in rows { out.push(r.map_err(|e| e.to_string())?) }
     }
+    Ok(out)
+}
+
+#[derive(Serialize)]
+pub struct GraphDoc { pub id: String, pub slug: String, pub title: String }
+
+#[tauri::command]
+pub async fn graph_backlinks(doc_id: String, db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<GraphDoc>, String> {
+    let conn = db.0.lock();
+    let mut stmt = conn.prepare(
+        "SELECT d.id, d.slug, d.title FROM link l JOIN doc d ON d.id = l.from_doc_id WHERE l.to_doc_id = ?1 ORDER BY d.updated_at DESC",
+    ).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map(params![doc_id], |r| Ok(GraphDoc { id: r.get(0)?, slug: r.get(1)?, title: r.get(2)? })).map_err(|e| e.to_string())?;
+    let mut out = Vec::new();
+    for r in rows { out.push(r.map_err(|e| e.to_string())?) }
+    Ok(out)
+}
+
+#[tauri::command]
+pub async fn graph_neighbors(doc_id: String, depth: Option<u8>, db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<GraphDoc>, String> {
+    // 1-hop for now per plan; can expand depth later
+    let conn = db.0.lock();
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT d.id, d.slug, d.title FROM (
+            SELECT l2.from_doc_id AS neighbor_id FROM link l
+            JOIN link l2 ON l.to_doc_id = l2.to_doc_id
+            WHERE l.from_doc_id = ?1 AND l2.from_doc_id != ?1
+            UNION
+            SELECT to_doc_id FROM link WHERE from_doc_id = ?1 AND to_doc_id IS NOT NULL
+        ) n JOIN doc d ON d.id = n.neighbor_id"
+    ).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map(params![doc_id], |r| Ok(GraphDoc { id: r.get(0)?, slug: r.get(1)?, title: r.get(2)? })).map_err(|e| e.to_string())?;
+    let mut out = Vec::new();
+    for r in rows { out.push(r.map_err(|e| e.to_string())?) }
     Ok(out)
 }

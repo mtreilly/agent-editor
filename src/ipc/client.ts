@@ -32,3 +32,7 @@ export const search = (query: string, repo_id?: string, limit = 50, offset = 0) 
   invoke<SearchHit[]>('search', { repoId: repo_id, query, limit, offset })
 
 export const serveApiStart = (port?: number) => invoke<void>('serve_api_start', { port })
+
+export type GraphDoc = { id: string; slug: string; title: string }
+export const graphBacklinks = (doc_id: string) => invoke<GraphDoc[]>('graph_backlinks', { docId: doc_id })
+export const graphNeighbors = (doc_id: string, depth = 1) => invoke<GraphDoc[]>('graph_neighbors', { docId: doc_id, depth })

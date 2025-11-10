@@ -186,6 +186,26 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             }
             Ok(serde_json::json!(out))
         }
+        "graph_backlinks" => {
+            #[derive(Deserialize)] struct P { doc_id: String }
+            let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
+            let conn = db.0.lock();
+            let mut stmt = conn.prepare("SELECT d.id, d.slug, d.title FROM link l JOIN doc d ON d.id = l.from_doc_id WHERE l.to_doc_id = ?1 ORDER BY d.updated_at DESC").map_err(|e| e.to_string())?;
+            let rows = stmt.query_map(params![p.doc_id], |r| Ok(serde_json::json!({"id": r.get::<_, String>(0)?, "slug": r.get::<_, String>(1)?, "title": r.get::<_, String>(2)?}))).map_err(|e| e.to_string())?;
+            let mut out = Vec::new();
+            for r in rows { out.push(r.map_err(|e| e.to_string())?) }
+            Ok(serde_json::json!(out))
+        }
+        "graph_neighbors" => {
+            #[derive(Deserialize)] struct P { doc_id: String, depth: Option<u8> }
+            let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
+            let conn = db.0.lock();
+            let mut stmt = conn.prepare("SELECT DISTINCT d.id, d.slug, d.title FROM (SELECT l2.from_doc_id AS neighbor_id FROM link l JOIN link l2 ON l.to_doc_id = l2.to_doc_id WHERE l.from_doc_id = ?1 AND l2.from_doc_id != ?1 UNION SELECT to_doc_id FROM link WHERE from_doc_id = ?1 AND to_doc_id IS NOT NULL) n JOIN doc d ON d.id = n.neighbor_id").map_err(|e| e.to_string())?;
+            let rows = stmt.query_map(params![p.doc_id], |r| Ok(serde_json::json!({"id": r.get::<_, String>(0)?, "slug": r.get::<_, String>(1)?, "title": r.get::<_, String>(2)?}))).map_err(|e| e.to_string())?;
+            let mut out = Vec::new();
+            for r in rows { out.push(r.map_err(|e| e.to_string())?) }
+            Ok(serde_json::json!(out))
+        }
         m => Err(format!("unknown method: {}", m)),
     }
 }
