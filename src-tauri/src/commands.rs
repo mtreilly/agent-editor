@@ -1,4 +1,4 @@
-use crate::db::Db;
+use crate::{db::Db, scan};
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -83,13 +83,15 @@ pub async fn scan_repo(repo_path: String, filters: Option<ScanFilters>, watch: O
         })
     };
     let conn = db.0.lock();
-    conn.execute(
-        "INSERT INTO scan_job(id,repo_id,status,stats) VALUES(?,?,'queued',json('{}'))",
-        params![job_id, repo_id],
-    )
-    .map_err(|e| e.to_string())?;
-    let _ = (filters, watch, debounce);
-    Ok(ScanJobReport { job_id, files_scanned: 0, docs_added: 0, errors: 0 })
+    conn.execute("INSERT INTO scan_job(id,repo_id,status,stats) VALUES(?,?,'running',json('{}'))", params![job_id, repo_id]).map_err(|e| e.to_string())?;
+    drop(conn);
+    let include = filters.as_ref().and_then(|f| f.include.clone()).unwrap_or_default();
+    let exclude = filters.as_ref().and_then(|f| f.exclude.clone()).unwrap_or_default();
+    let stats = scan::scan_once(&db, &repo_path, &include, &exclude)?;
+    let conn2 = db.0.lock();
+    conn2.execute("UPDATE scan_job SET status='success', stats=?2, finished_at=datetime('now') WHERE id=?1", params![job_id, serde_json::to_string(&serde_json::json!({"files_scanned": stats.files_scanned, "docs_added": stats.docs_added, "errors": stats.errors})).unwrap()]).map_err(|e| e.to_string())?;
+    let _ = (watch, debounce);
+    Ok(ScanJobReport { job_id, files_scanned: stats.files_scanned, docs_added: stats.docs_added, errors: stats.errors })
 }
 
 #[derive(Deserialize)]

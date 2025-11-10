@@ -3,6 +3,7 @@
 mod db;
 mod commands;
 mod api;
+mod scan;
 
 use std::path::PathBuf;
 use tauri::Manager;

@@ -14,6 +14,9 @@ thiserror = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 axum = "0.7"
 hyper = { version = "1", features = ["server"] }
+ignore = "0.4"
+walkdir = "2.5"
+blake3 = "1.5"
 
 [build-dependencies]
 tauri-build = { version = "2" }
