@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -28,6 +29,7 @@ func TestWriteDocsTar(t *testing.T) {
 	seenDocs := false
 	seenMeta := false
 	seenVersions := false
+	seenFiles := 0
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
@@ -65,10 +67,21 @@ func TestWriteDocsTar(t *testing.T) {
 				t.Fatalf("expected versions for 1 doc")
 			}
 		default:
+			if strings.HasPrefix(hdr.Name, "docs/") {
+				seenFiles++
+				data, err := io.ReadAll(tr)
+				if err != nil {
+					t.Fatalf("read doc file: %v", err)
+				}
+				if len(data) == 0 {
+					t.Fatalf("doc file %s empty", hdr.Name)
+				}
+				continue
+			}
 			t.Fatalf("unexpected tar entry %s", hdr.Name)
 		}
 	}
-	if !seenDocs || !seenMeta || !seenVersions {
-		t.Fatalf("expected docs.json, versions.json, and meta.json entries")
+	if !seenDocs || !seenMeta || !seenVersions || seenFiles == 0 {
+		t.Fatalf("expected docs.json, versions.json, meta.json, and docs/*.md entries")
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -123,6 +124,20 @@ func exportCmd() *cobra.Command {
 	return export
 }
 
+var sanitizedFilename = regexp.MustCompile(`[^a-zA-Z0-9-_]`)
+
+func safeDocFilename(id, slug string) string {
+	slug = strings.ToLower(slug)
+	slug = sanitizedFilename.ReplaceAllString(slug, "-")
+	if slug == "" {
+		slug = "doc"
+	}
+	if len(slug) > 40 {
+		slug = slug[:40]
+	}
+	return fmt.Sprintf("docs/%s-%s.md", slug, id)
+}
+
 func writeDocsTar(out string, docs []map[string]interface{}) error {
 	f, err := os.Create(out)
 	if err != nil {
@@ -178,6 +193,22 @@ func writeDocsTar(out string, docs []map[string]interface{}) error {
 			return err
 		}
 		if _, err := tw.Write(versionsJSON); err != nil {
+			return err
+		}
+	}
+	for _, doc := range docs {
+		body, _ := doc["body"].(string)
+		if body == "" {
+			continue
+		}
+		id, _ := doc["id"].(string)
+		slug, _ := doc["slug"].(string)
+		filename := safeDocFilename(id, slug)
+		content := []byte(body)
+		if err := tw.WriteHeader(&tar.Header{Name: filename, Mode: 0o600, Size: int64(len(content))}); err != nil {
+			return err
+		}
+		if _, err := tw.Write(content); err != nil {
 			return err
 		}
 	}

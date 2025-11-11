@@ -29,3 +29,4 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Export tar tests
 - Added Go unit test for writeDocsTar to ensure docs.json/meta.json integrity.
 - Enforced --out requirement when format=jsonl|tar.
+- Tar export now writes `docs/<slug-id>.md` files alongside docs.json/meta.json, providing raw Markdown snapshots.
