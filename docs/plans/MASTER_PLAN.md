@@ -769,8 +769,15 @@ Browser fallback (tests): Wrap `invoke` with a guard that returns empty stubs wh
 - Bench plan:
   1) Dataset: 100k Markdown notes, avg 1.2KB; 10 repos mix; generate fixtures.
   2) Scenarios: cold launch, open doc, save doc, FTS prefix/phrase/boolean, neighbor graph.
-  3) Scripts: Rust criterion benches for FTS/graph; Playwright for UI timings; Go CLI for scan throughput; CLI `fts bench` for latency.
+  3) Scripts: Rust criterion benches for FTS/graph; Playwright for UI timings; Go CLI for scan throughput; CLI `fts bench` for latency (avg, p50, p95, p99).
   4) Example: `agent-editor fts bench --query "foo" --n 50 -o json`
+  5) Orchestrate via tmux: `pnpm tmux:bench` (Pane A: sidecar, Pane B: FTS bench, Pane C: scan bench)
+
+Enforcement
+- Target thresholds:
+  - FTS P95 <= 50ms on 100k docs; P99 <= 80ms; avg <= 25ms (prefix/phrase).
+  - Scan throughput >= 1,000 docs/sec on SSD (initial pass on synthetic dataset), >200 docs/sec on large mixed repos.
+- Run `pnpm tmux:bench` and record results in docs/progress/STATUS.md each milestone.
 
 ## Security & Privacy
 - Local-first, network off by default.

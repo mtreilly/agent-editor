@@ -3,6 +3,7 @@ package cmd
 import (
     "fmt"
     "time"
+    "sort"
 
     "agent-editor/cli/internal/config"
     "agent-editor/cli/internal/output"
@@ -13,9 +14,22 @@ import (
 func ftsCmd() *cobra.Command {
     fts := &cobra.Command{Use: "fts", Short: "Full-text search ops"}
 
-    query := &cobra.Command{Use: "query <query>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { fmt.Println("fts query (stub)", args[0]); return nil }}
-    reindex := &cobra.Command{Use: "reindex", RunE: func(cmd *cobra.Command, args []string) error { fmt.Println("fts reindex (stub)"); return nil }}
-    stats := &cobra.Command{Use: "stats", RunE: func(cmd *cobra.Command, args []string) error { fmt.Println("fts stats (stub)"); return nil }}
+    query := &cobra.Command{Use: "query <query>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load()
+        cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        var res []map[string]interface{}
+        params := map[string]interface{}{"query": args[0], "limit": 50, "offset": 0}
+        if err := cli.Call(cmd.Context(), "search", params, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+    reindex := &cobra.Command{Use: "reindex", RunE: func(cmd *cobra.Command, args []string) error { fmt.Println("fts reindex (not implemented)"); return nil }}
+    stats := &cobra.Command{Use: "stats", RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load()
+        cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        var res map[string]interface{}
+        if err := cli.Call(cmd.Context(), "fts_stats", map[string]interface{}{}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
 
     bench := &cobra.Command{Use: "bench", Short: "Benchmark search latency", RunE: func(cmd *cobra.Command, args []string) error {
         q, _ := cmd.Flags().GetString("query")
@@ -37,7 +51,26 @@ func ftsCmd() *cobra.Command {
         var sum time.Duration
         for _, d := range durs { sum += d }
         avg := sum / time.Duration(len(durs))
-        return output.Print(map[string]any{"runs": n, "avg_ms": float64(avg.Microseconds())/1000.0}, cfg.OutputFormat)
+        // percentiles
+        sorted := append([]time.Duration(nil), durs...)
+        sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+        pick := func(p float64) time.Duration {
+            if len(sorted) == 0 { return 0 }
+            idx := int(p*float64(len(sorted)-1) + 0.5)
+            if idx < 0 { idx = 0 }
+            if idx >= len(sorted) { idx = len(sorted)-1 }
+            return sorted[idx]
+        }
+        p50 := pick(0.50)
+        p95 := pick(0.95)
+        p99 := pick(0.99)
+        return output.Print(map[string]any{
+            "runs": n,
+            "avg_ms": float64(avg.Microseconds())/1000.0,
+            "p50_ms": float64(p50.Microseconds())/1000.0,
+            "p95_ms": float64(p95.Microseconds())/1000.0,
+            "p99_ms": float64(p99.Microseconds())/1000.0,
+        }, cfg.OutputFormat)
     }}
     bench.Flags().String("query", "the", "Query to test")
     bench.Flags().Int("n", 25, "Number of runs")
