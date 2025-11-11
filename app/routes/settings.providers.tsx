@@ -139,6 +139,7 @@ function ProvidersSettings() {
                       className="border rounded px-2 py-1"
                       value={keys[p.name]?.value || ''}
                       aria-describedby={`hint-${p.name}-apikey`}
+                      title={t('hint.setKeyHelp', { defaultValue: 'Enter API key; stored via keychain when available.' }) as string}
                       onChange={(e) => setKeys((prev) => ({ ...prev, [p.name]: { ...(prev[p.name] || { has: false, value: '' }), value: e.target.value } }))}
                     />
                     <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!keys[p.name]?.value} title={!keys[p.name]?.value ? (t('hint.setKey') as string) : undefined} onClick={() => saveKey(p.name)}>{t('button.save')}</button>
@@ -157,6 +158,7 @@ function ProvidersSettings() {
                       className="border rounded px-2 py-1"
                       value={models[p.name] ?? ''}
                       aria-describedby={`hint-${p.name}-model`}
+                      title={t('hint.modelHelp', { defaultValue: 'Set default model for this provider (e.g., openrouter/auto).' }) as string}
                       onChange={(e) => setModels((prev) => ({ ...prev, [p.name]: e.target.value }))}
                     />
                     <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!allowed} title={!allowed ? (t('hint.enableProvider') as string) : undefined} onClick={() => saveModel(p.name)}>{t('button.saveModel', { defaultValue: 'Save Model' })}</button>
