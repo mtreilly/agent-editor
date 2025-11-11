@@ -25,6 +25,7 @@ function DocPage() {
   const [related, setRelated] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
   const [providerAllowed, setProviderAllowed] = React.useState(true)
   const [providerName, setProviderName] = React.useState('')
+  const [providerModel, setProviderModel] = React.useState<string>('')
   const navigate = useNavigate()
 
   const editorApiRef = React.useRef<{
@@ -42,6 +43,15 @@ function DocPage() {
         const pv = await api.aiProviderResolve(d.id, 'default')
         setProviderAllowed(!!pv.allowed)
         setProviderName(pv.name)
+        // Preload model if known provider (e.g., openrouter)
+        try {
+          if (pv.name === 'openrouter') {
+            const mg = await api.aiProviderModelGet('openrouter')
+            setProviderModel(mg?.model || '')
+          } else {
+            setProviderModel('')
+          }
+        } catch {}
       } catch {}
       // Load graph info for this doc id/slug
       try {
@@ -148,6 +158,9 @@ function DocPage() {
         <button className="ml-2 px-3 py-2 border rounded" onClick={insertAnchor}>{t('button.insertAnchor', { ns: 'editor' })}</button>
         {lastAnchor && (
           <span className="ml-3 text-xs text-gray-600">{t('label.lastAnchor', { ns: 'editor', id: lastAnchor.id, line: lastAnchor.line })}</span>
+        )}
+        {!!providerName && (
+          <span className="ml-3 text-xs text-gray-600">{t('label.provider', { ns: 'editor' })}: {providerName}{providerModel ? ` (model: ${providerModel})` : ''}</span>
         )}
       </div>
       <AnchorsPanel docId={doc.id} editorApiRef={editorApiRef as any} />
