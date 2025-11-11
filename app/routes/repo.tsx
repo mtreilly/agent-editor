@@ -17,6 +17,7 @@ function RepoPage() {
   const [lastEvt, setLastEvt] = React.useState<string>("")
   const [providers, setProviders] = React.useState<Array<api.Provider>>([])
   const [defaults, setDefaults] = React.useState<Record<string, string>>({})
+  const [globalDefault, setGlobalDefault] = React.useState<string>('local')
 
   const load = React.useCallback(async () => {
     const rs = await api.reposList()
@@ -24,6 +25,10 @@ function RepoPage() {
     try {
       const ps = await api.aiProvidersList()
       setProviders(ps)
+    } catch {}
+    try {
+      const g = await api.appSettingsGet('default_provider')
+      if (g && typeof g.value === 'string') setGlobalDefault(g.value)
     } catch {}
     const map: Record<string, string> = {}
     for (const r of rs) {
@@ -106,6 +111,7 @@ function RepoPage() {
                       className="px-2 py-1 border rounded"
                       onClick={async () => { await api.reposSetDefaultProvider(r.id, defaults[r.id] || 'local'); await load() }}
                     >{t('button.set') || 'Set'}</button>
+                    <span className="ml-2 text-gray-600">{t('effectiveProvider', { defaultValue: 'Effective' })}: {(defaults[r.id] && defaults[r.id].length) ? defaults[r.id] : globalDefault}</span>
                   </div>
                 )}
               </div>

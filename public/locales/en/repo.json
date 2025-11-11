@@ -5,6 +5,7 @@
   "button.add": "Add",
   "repositories": "Repositories",
   "defaultProvider": "Default Provider",
+  "effectiveProvider": "Effective",
   "button.set": "Set",
   "scan": "Scan",
   "remove": "Remove",
