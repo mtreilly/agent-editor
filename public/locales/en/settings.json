@@ -15,5 +15,10 @@
   "button.saveModel": "Save Model",
   "label.keySet": "Key set",
   "globalDefaultProvider": "Global default provider",
-  "modelPlaceholder": "openrouter/auto"
+  "modelPlaceholder": "openrouter/auto",
+  "label.missingKey": "Missing key",
+  "label.disabled": "Disabled",
+  "label.allowed": "Allowed",
+  "hint.enableProvider": "Enable provider and set key to use",
+  "hint.setKey": "Enter API key to save"
 }

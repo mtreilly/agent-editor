@@ -106,11 +106,23 @@ function ProvidersSettings() {
           </tr>
         </thead>
         <tbody>
-          {providers.map((p) => (
+          {providers.map((p) => {
+            const hasKey = !!keys[p.name]?.has
+            const allowed = p.enabled && (p.kind !== 'remote' || hasKey)
+            return (
             <tr key={p.name} className="border-b">
               <td className="py-2 pr-2 font-mono">{p.name}</td>
               <td className="py-2 pr-2">{p.kind}</td>
-              <td className="py-2 pr-2">{p.enabled ? t('yes', { ns: 'common' }) : t('no', { ns: 'common' })}</td>
+              <td className="py-2 pr-2">
+                {p.enabled ? t('yes', { ns: 'common' }) : t('no', { ns: 'common' })}
+                {p.kind === 'remote' && (
+                  <>
+                    {!hasKey && <span className="ml-2 text-xs text-amber-700" aria-label={t('label.missingKey') as string}>{t('label.missingKey')}</span>}
+                    {!p.enabled && <span className="ml-2 text-xs text-red-700" aria-label={t('label.disabled') as string}>{t('label.disabled')}</span>}
+                    {allowed && <span className="ml-2 text-xs text-green-700" aria-label={t('label.allowed') as string}>{t('label.allowed')}</span>}
+                  </>
+                )}
+              </td>
               <td className="py-2">
                 <button
                   className="px-2 py-1 border rounded"
@@ -128,8 +140,8 @@ function ProvidersSettings() {
                       value={keys[p.name]?.value || ''}
                       onChange={(e) => setKeys((prev) => ({ ...prev, [p.name]: { ...(prev[p.name] || { has: false, value: '' }), value: e.target.value } }))}
                     />
-                    <button className="px-2 py-1 border rounded" onClick={() => saveKey(p.name)}>{t('button.save')}</button>
-                    <button className="px-2 py-1 border rounded" onClick={() => testProvider(p.name)}>{t('button.test') || 'Test'}</button>
+                    <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!keys[p.name]?.value} title={!keys[p.name]?.value ? (t('hint.setKey') as string) : undefined} onClick={() => saveKey(p.name)}>{t('button.save')}</button>
+                    <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!allowed} title={!allowed ? (t('hint.enableProvider') as string) : undefined} onClick={() => testProvider(p.name)}>{t('button.test') || 'Test'}</button>
                     {keys[p.name]?.has && <span className="text-xs text-gray-600">{t('label.keySet')}</span>}
                   </div>
                 )}
@@ -142,12 +154,12 @@ function ProvidersSettings() {
                       value={models[p.name] ?? ''}
                       onChange={(e) => setModels((prev) => ({ ...prev, [p.name]: e.target.value }))}
                     />
-                    <button className="px-2 py-1 border rounded" onClick={() => saveModel(p.name)}>{t('button.saveModel', { defaultValue: 'Save Model' })}</button>
+                    <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!allowed} title={!allowed ? (t('hint.enableProvider') as string) : undefined} onClick={() => saveModel(p.name)}>{t('button.saveModel', { defaultValue: 'Save Model' })}</button>
                   </div>
                 )}
               </td>
             </tr>
-          ))}
+          )})}
           {!providers.length && !loading && (
             <tr><td className="py-4 text-gray-600" colSpan={4}>{t('status.noProviders')}</td></tr>
           )}
