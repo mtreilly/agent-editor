@@ -57,3 +57,7 @@ agent-editor export db --out backup/agent-editor.db
 ## Transport
 - CLI talks to the JSON-RPC sidecar at `http://127.0.0.1:35678/rpc`.
 - Start sidecar: `pnpm rpc:dev` (or run desktop with `pnpm dev`).
+
+# Import
+agent-editor import docs backup/docs.tar --repo r1 --dry-run
+agent-editor import docs backup/docs.tar --new-repo imported --merge-strategy overwrite

@@ -73,3 +73,4 @@ Next Phase: M4 Packaging + CI
 Notes
 - Tauri build requires a valid RGBA icon at `src-tauri/icons/icon.png` for packaging.
  - Approve SWC/esbuild builds with `pnpm approve-builds` if prompted.
+- Import CLI: stubbed `agent-editor import docs` command + `import_docs` RPC returning placeholder; manual added for archive format.

@@ -36,3 +36,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 
 ## 2025-11-11 — Import plan
 - Added docs/plans/IMPORT_PLAN.md covering archive formats, CLI entrypoint, and next steps for import pipeline.
+
+## 2025-11-11 — Import CLI stub
+- Added `agent-editor import docs` CLI command that hits `import_docs` RPC (currently stubbed; validates --repo/--new-repo exclusivity).
+- Documented archive format and import flow in `docs/manual/IMPORT.md`.

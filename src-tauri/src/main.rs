@@ -45,6 +45,7 @@ fn main() {
             commands::docs_delete,
             commands::export_docs,
             commands::export_db,
+            commands::import_docs,
             commands::search,
             commands::ai_run,
             commands::ai_providers_list,

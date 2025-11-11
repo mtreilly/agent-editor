@@ -599,6 +599,31 @@ pub async fn export_db(out_path: String, db: State<'_, std::sync::Arc<Db>>) -> R
     }))
 }
 
+#[derive(Deserialize)]
+pub struct ImportDocsPayload {
+    pub path: String,
+    pub repo_id: Option<String>,
+    pub new_repo_name: Option<String>,
+    pub dry_run: Option<bool>,
+    pub merge_strategy: Option<String>,
+}
+
+#[tauri::command]
+pub async fn import_docs(payload: ImportDocsPayload) -> Result<serde_json::Value, String> {
+    let strategy = payload.merge_strategy.unwrap_or_else(|| "keep".to_string());
+    if payload.repo_id.is_some() && payload.new_repo_name.is_some() {
+        return Err("repo_id and new_repo_name are mutually exclusive".into());
+    }
+    Ok(serde_json::json!({
+        "path": payload.path,
+        "repo_id": payload.repo_id,
+        "new_repo_name": payload.new_repo_name,
+        "dry_run": payload.dry_run.unwrap_or(false),
+        "merge_strategy": strategy,
+        "status": "not_implemented",
+    }))
+}
+
 #[derive(Serialize)]
 pub struct SearchHit { pub id: String, pub slug: String, pub title_snip: String, pub body_snip: String, pub rank: f64 }
 
