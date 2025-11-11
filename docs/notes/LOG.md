@@ -30,3 +30,6 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 - Added Go unit test for writeDocsTar to ensure docs.json/meta.json integrity.
 - Enforced --out requirement when format=jsonl|tar.
 - Tar export now writes `docs/<slug-id>.md` files alongside docs.json/meta.json, providing raw Markdown snapshots.
+
+## 2025-11-11 — CLI imports/tests
+- Switched CLI imports to module path `github.com/agent-editor/agent-editor/cli/...` and fixed ai command braces so `go test ./cli/...` passes.

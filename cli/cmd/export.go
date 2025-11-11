@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"agent-editor/cli/internal/config"
-	"agent-editor/cli/internal/output"
-	"agent-editor/cli/internal/rpc"
+	"github.com/agent-editor/agent-editor/cli/internal/config"
+	"github.com/agent-editor/agent-editor/cli/internal/output"
+	"github.com/agent-editor/agent-editor/cli/internal/rpc"
 	"github.com/spf13/cobra"
 )
 
