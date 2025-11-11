@@ -66,13 +66,13 @@ function DocPage() {
     registerCommands(owner, [
       {
         id: 'ai.run.doc',
-        title: 'AI: Run on current doc',
+        title: t('aiRunDoc', { ns: 'palette' }),
         run: async () => {
           try {
             const res = await api.aiRun('default', doc.id, prompt || 'Explain this document')
             alert(res.text)
           } catch (e: any) {
-            alert(`AI run failed: ${e?.message || e}`)
+            alert(`${t('error.aiRunFailed', { ns: 'editor' })}: ${e?.message || e}`)
           }
         },
       },

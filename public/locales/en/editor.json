@@ -11,5 +11,6 @@
   "label.lastAnchor": "Last anchor: {{id}} (line {{line}})",
   "button.runAI": "Run AI",
   "button.runAIAnchor": "Run AI @Anchor",
+  "error.aiRunFailed": "AI run failed",
   "placeholder.prompt": "Prompt"
 }
