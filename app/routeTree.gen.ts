@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as RepoRouteImport } from './routes/repo'
+import { Route as PluginsRouteImport } from './routes/plugins'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsProvidersRouteImport } from './routes/settings.providers'
 import { Route as GraphIdRouteImport } from './routes/graph.$id'
 import { Route as DocIdRouteImport } from './routes/doc.$id'
 
@@ -25,9 +27,19 @@ const RepoRoute = RepoRouteImport.update({
   path: '/repo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PluginsRoute = PluginsRouteImport.update({
+  id: '/plugins',
+  path: '/plugins',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsProvidersRoute = SettingsProvidersRouteImport.update({
+  id: '/settings/providers',
+  path: '/settings/providers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GraphIdRoute = GraphIdRouteImport.update({
@@ -43,40 +55,70 @@ const DocIdRoute = DocIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/plugins': typeof PluginsRoute
   '/repo': typeof RepoRoute
   '/search': typeof SearchRoute
   '/doc/$id': typeof DocIdRoute
   '/graph/$id': typeof GraphIdRoute
+  '/settings/providers': typeof SettingsProvidersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/plugins': typeof PluginsRoute
   '/repo': typeof RepoRoute
   '/search': typeof SearchRoute
   '/doc/$id': typeof DocIdRoute
   '/graph/$id': typeof GraphIdRoute
+  '/settings/providers': typeof SettingsProvidersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/plugins': typeof PluginsRoute
   '/repo': typeof RepoRoute
   '/search': typeof SearchRoute
   '/doc/$id': typeof DocIdRoute
   '/graph/$id': typeof GraphIdRoute
+  '/settings/providers': typeof SettingsProvidersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/repo' | '/search' | '/doc/$id' | '/graph/$id'
+  fullPaths:
+    | '/'
+    | '/plugins'
+    | '/repo'
+    | '/search'
+    | '/doc/$id'
+    | '/graph/$id'
+    | '/settings/providers'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/repo' | '/search' | '/doc/$id' | '/graph/$id'
-  id: '__root__' | '/' | '/repo' | '/search' | '/doc/$id' | '/graph/$id'
+  to:
+    | '/'
+    | '/plugins'
+    | '/repo'
+    | '/search'
+    | '/doc/$id'
+    | '/graph/$id'
+    | '/settings/providers'
+  id:
+    | '__root__'
+    | '/'
+    | '/plugins'
+    | '/repo'
+    | '/search'
+    | '/doc/$id'
+    | '/graph/$id'
+    | '/settings/providers'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PluginsRoute: typeof PluginsRoute
   RepoRoute: typeof RepoRoute
   SearchRoute: typeof SearchRoute
   DocIdRoute: typeof DocIdRoute
   GraphIdRoute: typeof GraphIdRoute
+  SettingsProvidersRoute: typeof SettingsProvidersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -95,11 +137,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RepoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plugins': {
+      id: '/plugins'
+      path: '/plugins'
+      fullPath: '/plugins'
+      preLoaderRoute: typeof PluginsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/providers': {
+      id: '/settings/providers'
+      path: '/settings/providers'
+      fullPath: '/settings/providers'
+      preLoaderRoute: typeof SettingsProvidersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/graph/$id': {
@@ -121,10 +177,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PluginsRoute: PluginsRoute,
   RepoRoute: RepoRoute,
   SearchRoute: SearchRoute,
   DocIdRoute: DocIdRoute,
   GraphIdRoute: GraphIdRoute,
+  SettingsProvidersRoute: SettingsProvidersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
