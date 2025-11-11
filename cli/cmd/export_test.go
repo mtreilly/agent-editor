@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -112,5 +113,23 @@ func TestWriteDocsTar(t *testing.T) {
 	}
 	if !seenDocs || !seenMeta || !seenVersions || seenFiles == 0 || seenAttachments == 0 {
 		t.Fatalf("expected docs.json, versions.json, meta.json, docs/*.md, and attachments entries")
+	}
+}
+
+func TestDocSlugKeySanitizesAndTruncates(t *testing.T) {
+	id := "abc123"
+	key := docSlugKey(id, "Hello World! 😸 with /weird*chars and a very very very very long slug that should be trimmed.")
+	if !strings.HasSuffix(key, fmt.Sprintf("-%s", id)) {
+		t.Fatalf("slug key not suffixed with id: %s", key)
+	}
+	prefix := strings.TrimSuffix(key, fmt.Sprintf("-%s", id))
+	if len(prefix) > 40 {
+		t.Fatalf("slug prefix not truncated to 40 chars: %d", len(prefix))
+	}
+	if strings.ContainsAny(prefix, " /!*") {
+		t.Fatalf("slug prefix contains invalid characters: %s", prefix)
+	}
+	if prefix != strings.ToLower(prefix) {
+		t.Fatalf("slug prefix not lowercased: %s", prefix)
 	}
 }
