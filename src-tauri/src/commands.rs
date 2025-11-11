@@ -70,6 +70,73 @@ pub async fn repos_info(id_or_name: String, db: State<'_, std::sync::Arc<Db>>) -
     Err("not_found".into())
 }
 
+#[cfg(test)]
+mod tests_perm {
+    use super::*;
+    use crate::db::open_db;
+    use std::sync::Arc;
+
+    fn test_db() -> Arc<Db> {
+        let p = std::env::temp_dir().join(format!("ae-perm-test-{}.db", uuid::Uuid::new_v4()));
+        Arc::new(open_db(&p).expect("open db"))
+    }
+
+    fn insert_plugin(db: &Arc<Db>, name: &str, enabled: i64, permissions: &str) {
+        let conn = db.0.lock();
+        let id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO plugin(id,name,version,kind,manifest,permissions,enabled) VALUES(?1,?2,'1.0.0','core',json('{}'),?3,?4) \
+             ON CONFLICT(name) DO UPDATE SET permissions=excluded.permissions, enabled=excluded.enabled",
+            params![id, name, permissions, enabled],
+        ).unwrap();
+    }
+
+    #[test]
+    fn core_call_forbidden_when_disabled() {
+        let db = test_db();
+        insert_plugin(&db, "p1", 0, r#"{"core":{"call":1}}"#);
+        let line = r#"{"jsonrpc":"2.0","id":"1","method":"fs.readFile","params":{"path":"/tmp"}}"#;
+        let err = plugins_call_core_check(&db, "p1", line).unwrap_err();
+        assert_eq!(err, "forbidden");
+    }
+
+    #[test]
+    fn core_call_forbidden_without_permission() {
+        let db = test_db();
+        insert_plugin(&db, "p2", 1, r#"{}"#);
+        let line = r#"{"jsonrpc":"2.0","id":"1","method":"fs.readFile","params":{"path":"/tmp"}}"#;
+        let err = plugins_call_core_check(&db, "p2", line).unwrap_err();
+        assert_eq!(err, "forbidden");
+    }
+
+    #[test]
+    fn net_request_domain_allowlist() {
+        let db = test_db();
+        insert_plugin(&db, "p3", 1, r#"{"core":{"call":1},"net":{"request":1,"domains":["api.example.com"]}}"#);
+        let ok_line = r#"{"jsonrpc":"2.0","id":"1","method":"net.request","params":{"url":"https://api.example.com/v1"}}"#;
+        let bad_line = r#"{"jsonrpc":"2.0","id":"1","method":"net.request","params":{"url":"https://other.com/"}}"#;
+        assert!(plugins_call_core_check(&db, "p3", ok_line).is_ok());
+        let err = plugins_call_core_check(&db, "p3", bad_line).unwrap_err();
+        assert_eq!(err, "forbidden_net_domain");
+    }
+
+    #[test]
+    fn fs_roots_allowlist() {
+        let db = test_db();
+        let root = std::env::temp_dir().join(format!("ae-perm-root-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        let inside = root.join("file.txt");
+        std::fs::write(&inside, b"ok").unwrap();
+        let perms = format!("{{\"core\":{{\"call\":1}},\"fs\":{{\"read\":1,\"roots\":[\"{}\"]}}}}", root.display());
+        insert_plugin(&db, "p4", 1, &perms);
+        let ok_line = format!("{{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"fs.readFile\",\"params\":{{\"path\":\"{}\"}}}}", inside.display());
+        assert!(plugins_call_core_check(&db, "p4", &ok_line).is_ok());
+        let bad_line = "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"fs.readFile\",\"params\":{\"path\":\"/etc/hosts\"}}";
+        let err = plugins_call_core_check(&db, "p4", bad_line).unwrap_err();
+        assert_eq!(err, "forbidden_fs_root");
+    }
+}
+
 #[tauri::command]
 pub async fn repos_remove(id_or_name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let conn = db.0.lock();
@@ -667,8 +734,7 @@ pub async fn plugins_shutdown_core(name: String) -> Result<serde_json::Value, St
     Ok(serde_json::json!({"stopped": false}))
 }
 
-#[tauri::command]
-pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+fn plugins_call_core_check(db: &std::sync::Arc<Db>, name: &str, line: &str) -> Result<(), String> {
     // Capability gate: plugin must be enabled and have permissions.core.call=true
     {
         let conn = db.0.lock();
@@ -682,7 +748,7 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
         if allowed == 0 { return Err("forbidden".into()); }
     }
     // Validate JSON-RPC envelope and method-level permissions
-    let parsed: serde_json::Value = serde_json::from_str(&line).map_err(|_| "invalid_request".to_string())?;
+    let parsed: serde_json::Value = serde_json::from_str(line).map_err(|_| "invalid_request".to_string())?;
     let method = parsed.get("method").and_then(|m| m.as_str()).unwrap_or("");
     if method.is_empty() { return Err("invalid_request".into()); }
     let perm_key: Option<&str> = if method.starts_with("fs.write") {
@@ -713,12 +779,11 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
             .unwrap_or(0);
         if allowed == 0 { return Err("forbidden".into()); }
     }
-    // net.request domain allowlist: permissions.net.domains contains allowed hosts
+    // net.request domain allowlist
     if method.starts_with("net.request") {
         let params_v = parsed.get("params").cloned().unwrap_or(serde_json::json!({}));
         let url_s = params_v.get("url").and_then(|v| v.as_str()).unwrap_or("");
         if !url_s.is_empty() {
-            // naive host extraction
             let host = if let Some(rest) = url_s.split("//").nth(1) {
                 rest.split('/').next().unwrap_or("").split(':').next().unwrap_or("")
             } else { url_s };
@@ -730,9 +795,7 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
                     if let Some(arr) = val.get("net").and_then(|n| n.get("domains")).and_then(|d| d.as_array()) {
                         for d in arr {
                             if let Some(dom) = d.as_str() {
-                                if host.eq_ignore_ascii_case(dom) || (dom.starts_with('.') && host.ends_with(dom)) {
-                                    allowed = true; break;
-                                }
+                                if host.eq_ignore_ascii_case(dom) || (dom.starts_with('.') && host.ends_with(dom)) { allowed = true; break; }
                             }
                         }
                     }
@@ -741,7 +804,7 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
             if !allowed { return Err("forbidden_net_domain".into()); }
         }
     }
-    // FS roots allowlist: when calling fs.* methods, enforce that params.path is under one of permissions.fs.roots
+    // FS roots allowlist
     if method.starts_with("fs.") {
         let params_v = parsed.get("params").cloned().unwrap_or(serde_json::json!({}));
         let req_path = params_v.get("path").and_then(|v| v.as_str()).unwrap_or("");
@@ -765,6 +828,12 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
             if !allowed { return Err("forbidden_fs_root".into()); }
         }
     }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    plugins_call_core_check(&db, &name, &line)?;
     static REG: OnceLock<Mutex<HashMap<String, CoreProc>>> = OnceLock::new();
     let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));
     let mut map = reg.lock().map_err(|_| "lock_poison")?;
