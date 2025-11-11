@@ -61,6 +61,7 @@ fn main() {
             commands::plugins_remove,
             commands::plugins_upsert,
             commands::plugins_call_core,
+            commands::plugins_core_list,
             commands::plugins_spawn_core,
             commands::plugins_shutdown_core,
             commands::anchors_upsert,

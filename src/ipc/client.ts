@@ -56,6 +56,8 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
       const provider = (args?.provider === 'default') ? 'openrouter' : (args?.provider || 'local')
       return { trace_id: 'stub-trace', text: `[${provider}]\nPrompt: ${args?.prompt || ''}`, provider, model: provider === 'openrouter' ? 'openrouter/auto' : '' } as any as T
     }
+    case 'plugins_core_list':
+      return [] as any as T
     default:
       throw new Error(`Not in Tauri environment: ${cmd}`)
   }
@@ -148,3 +150,4 @@ export const pluginsSpawnCore = (name: string, exec: string, args?: string[]) =>
   safeInvoke<{ ok?: boolean }>('plugins_spawn_core', { name, exec, args })
 export const pluginsShutdownCore = (name: string) => safeInvoke<{ ok?: boolean }>('plugins_shutdown_core', { name })
 export const pluginsCallCore = (name: string, line: string) => safeInvoke<any>('plugins_call_core', { name, line })
+export const pluginsCoreList = () => safeInvoke<Array<{ name: string; pid?: number; running: boolean }>>('plugins_core_list')

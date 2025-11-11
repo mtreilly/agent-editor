@@ -869,6 +869,22 @@ fn plugins_call_core_check(db: &std::sync::Arc<Db>, name: &str, line: &str) -> R
 }
 
 #[tauri::command]
+pub async fn plugins_core_list() -> Result<Vec<serde_json::Value>, String> {
+    static REG: OnceLock<Mutex<HashMap<String, CoreProc>>> = OnceLock::new();
+    let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut out = Vec::new();
+    if let Ok(mut map) = reg.lock() {
+        for (name, proc) in map.iter_mut() {
+            // Determine if still running
+            let running = proc.child.try_wait().ok().flatten().is_none();
+            let pid = proc.child.id();
+            out.push(serde_json::json!({ "name": name, "pid": pid, "running": running }));
+        }
+    }
+    Ok(out)
+}
+
+#[tauri::command]
 pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     plugins_call_core_check(&db, &name, &line)?;
     static REG: OnceLock<Mutex<HashMap<String, CoreProc>>> = OnceLock::new();

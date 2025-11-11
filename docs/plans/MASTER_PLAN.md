@@ -1076,3 +1076,5 @@ export interface GraphEdge { from: string; to: string; type: 'wiki'|'url'|'headi
 - SSR details for TanStack Start inside Tauri are simplified to client-only; propose adding a small Node runner for web targets only.
 - ElectricSQL exact runtime init depends on chosen adapter; finalize during implementation.
 - `doc_fts.body` hex insert in trigger should be replaced by app-side update to ensure UTF-8 correctness; include a post-version-insert app routine to refresh FTS body with text.
+- IPC Plumbing
+  - Added `plugins_core_list` to enumerate running core plugin processes with pid + running flag for diagnostics.
