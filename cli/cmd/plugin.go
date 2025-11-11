@@ -1,8 +1,14 @@
 package cmd
 
 import (
+    "bufio"
     "context"
+    "errors"
     "fmt"
+    "os"
+    "strings"
+    "time"
+
     "agent-editor/cli/internal/config"
     "agent-editor/cli/internal/output"
     "agent-editor/cli/internal/rpc"
@@ -79,7 +85,45 @@ func pluginCmd() *cobra.Command {
     }}
 
     events := &cobra.Command{Use: "events", Short: "Plugin events"}
-    eventsTail := &cobra.Command{Use: "tail", RunE: func(cmd *cobra.Command, args []string) error { fmt.Println("plugin events tail (stub)"); return nil }}
+    eventsTail := &cobra.Command{Use: "tail", Short: "Tail plugin log events", RunE: func(cmd *cobra.Command, args []string) error {
+        file, _ := cmd.Flags().GetString("file")
+        follow, _ := cmd.Flags().GetBool("follow")
+        all, _ := cmd.Flags().GetBool("all")
+        fromBeginning, _ := cmd.Flags().GetBool("from-beginning")
+        if file == "" { file = ".sidecar.log" }
+        f, err := os.Open(file)
+        if err != nil { return err }
+        defer f.Close()
+
+        // Optionally seek to end
+        if !fromBeginning {
+            if _, err := f.Seek(0, os.SEEK_END); err != nil { return err }
+        }
+
+        reader := bufio.NewReader(f)
+        for {
+            line, err := reader.ReadString('\n')
+            if err != nil {
+                if errors.Is(err, os.ErrClosed) { return nil }
+                // If following, wait and retry; else EOF means done
+                if !follow {
+                    if len(strings.TrimSpace(line)) > 0 {
+                        if all || strings.Contains(line, "][plugin:") { fmt.Print(line) }
+                    }
+                    return nil
+                }
+                time.Sleep(250 * time.Millisecond)
+                continue
+            }
+            if all || strings.Contains(line, "][plugin:") {
+                fmt.Print(line)
+            }
+        }
+    }}
+    eventsTail.Flags().String("file", ".sidecar.log", "Path to sidecar log file")
+    eventsTail.Flags().Bool("follow", true, "Keep streaming new lines (like tail -f)")
+    eventsTail.Flags().Bool("all", false, "Show all lines (not only [plugin:*] prefixed)")
+    eventsTail.Flags().Bool("from-beginning", false, "Start reading from beginning (default seeks to end)")
     events.AddCommand(eventsTail)
 
     plugin.AddCommand(install, list, info, remove, enable, disable, call, callCore, startCore, stopCore, coreList, events)
