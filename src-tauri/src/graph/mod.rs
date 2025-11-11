@@ -155,3 +155,11 @@ mod tests {
         assert_eq!(links.len(), 0);
     }
 }
+//! Graph: Link extraction and queries.
+//!
+//! Responsibilities
+//! - Extract wiki-links from Markdown, ignoring code blocks/inline code and escaped brackets
+//! - Persist `link` rows and maintain document backlink counts
+//! - Provide graph queries: neighbors, backlinks, related (co-citation), and shortest path
+//!
+//! See docs: `docs/guides/SCANNER.md` and `docs/manual/DATA_MODEL.md`.

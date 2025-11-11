@@ -197,3 +197,12 @@ pub fn watch_repo(db: std::sync::Arc<Db>, repo_path: String, include: Vec<String
     });
     Ok(())
 }
+//! Scanner and watcher.
+//!
+//! Responsibilities
+//! - Initial scan: walk repos respecting .gitignore, ingest `**/*.md`
+//! - Upsert folder/doc/doc_blob/doc_version and maintain FTS via delete+insert
+//! - Extract wiki-links and update `link` + `backlink_count`
+//! - Watch mode: debounce file changes and rescan incrementally; emit `progress.scan`
+//!
+//! See docs: `docs/guides/SCANNER.md` for pipeline details and invariants.
