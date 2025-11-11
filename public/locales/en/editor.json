@@ -11,6 +11,7 @@
   "label.lastAnchor": "Last anchor: {{id}} (line {{line}})",
   "button.runAI": "Run AI",
   "button.runAIAnchor": "Run AI @Anchor",
+  "error.providerNotAllowed": "Provider not allowed (enable and set key)",
   "error.aiRunFailed": "AI run failed",
   "placeholder.prompt": "Prompt"
 }

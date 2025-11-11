@@ -347,6 +347,85 @@ pub struct AiRunRequest {
 }
 
 #[tauri::command]
+pub async fn ai_provider_resolve(doc_id: Option<String>, provider: Option<String>, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    // Resolve provider similar to ai_run_core
+    let provider_name: String = {
+        let conn = db.0.lock();
+        let use_default = provider.as_deref().unwrap_or("default").is_empty() || provider.as_deref() == Some("default");
+        if use_default {
+            // Try repo default via doc_id if provided
+            if let Some(ref did) = doc_id {
+                let repo_id: Option<String> = conn
+                    .query_row(
+                        "SELECT d.repo_id FROM doc d WHERE d.id=?1 OR d.slug=?1",
+                        rusqlite::params![did],
+                        |r| r.get(0),
+                    )
+                    .ok();
+                if let Some(rid) = repo_id {
+                    let repo_default: Option<String> = conn
+                        .query_row(
+                            "SELECT json_extract(settings,'$.default_provider') FROM repo WHERE id=?1",
+                            rusqlite::params![rid],
+                            |r| r.get(0),
+                        )
+                        .ok();
+                    if let Some(p) = repo_default.filter(|s: &String| !s.is_empty()) { p } else {
+                        conn.query_row(
+                            "SELECT value FROM app_setting WHERE key='default_provider'",
+                            [],
+                            |r| r.get::<_, String>(0),
+                        )
+                        .unwrap_or_else(|_| "local".into())
+                    }
+                } else {
+                    conn.query_row(
+                        "SELECT value FROM app_setting WHERE key='default_provider'",
+                        [],
+                        |r| r.get::<_, String>(0),
+                    )
+                    .unwrap_or_else(|_| "local".into())
+                }
+            } else {
+                conn.query_row(
+                    "SELECT value FROM app_setting WHERE key='default_provider'",
+                    [],
+                    |r| r.get::<_, String>(0),
+                )
+                .unwrap_or_else(|_| "local".into())
+            }
+        } else {
+            provider.unwrap()
+        }
+    };
+
+    // Lookup kind/enabled and key presence
+    let (kind, enabled) = {
+        let conn = db.0.lock();
+        conn
+            .query_row(
+                "SELECT kind, enabled FROM provider WHERE name=?1",
+                rusqlite::params![&provider_name],
+                |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)),
+            )
+            .unwrap_or_else(|_| (String::from("local"), 1))
+    };
+
+    let mut has_key = true;
+    if kind == "remote" {
+        has_key = secrets::provider_key_exists(&db, &provider_name)?;
+    }
+    let allowed = enabled != 0 && (kind != "remote" || has_key);
+    Ok(serde_json::json!({
+        "name": provider_name,
+        "kind": kind,
+        "enabled": enabled != 0,
+        "has_key": has_key,
+        "allowed": allowed
+    }))
+}
+
+#[tauri::command]
 pub async fn ai_run(provider: String, doc_id: String, anchor_id: Option<String>, prompt: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let req = AiRunRequest { provider, doc_id, anchor_id, line: None, prompt };
     ai_run_core(&db, req)

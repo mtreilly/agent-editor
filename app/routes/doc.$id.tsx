@@ -22,6 +22,8 @@ function DocPage() {
   const [backlinks, setBacklinks] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
   const [neighbors, setNeighbors] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
   const [related, setRelated] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
+  const [providerAllowed, setProviderAllowed] = React.useState(true)
+  const [providerName, setProviderName] = React.useState('')
   const navigate = useNavigate()
 
   const editorApiRef = React.useRef<{
@@ -35,6 +37,11 @@ function DocPage() {
       const d = await api.docsGet(id, true)
       setDoc(d)
       setBody(d.body || '')
+      try {
+        const pv = await api.aiProviderResolve(d.id, 'default')
+        setProviderAllowed(!!pv.allowed)
+        setProviderName(pv.name)
+      } catch {}
       // Load graph info for this doc id/slug
       try {
         const bl = await api.graphBacklinks(id)
@@ -68,6 +75,10 @@ function DocPage() {
         id: 'ai.run.doc',
         title: t('aiRunDoc', { ns: 'palette' }),
         run: async () => {
+          if (!providerAllowed) {
+            alert(t('error.providerNotAllowed', { ns: 'editor' }))
+            return
+          }
           try {
             const res = await api.aiRun('default', doc.id, prompt || 'Explain this document')
             alert(res.text)
@@ -141,12 +152,12 @@ function DocPage() {
       <div className="space-y-2">
         <div className="flex gap-2">
           <input className="border rounded px-3 py-2 w-full" placeholder={t('placeholder.prompt', { ns: 'editor' })} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
-          <button className="px-3 py-2 border rounded" onClick={runAI}>{t('button.runAI', { ns: 'editor' })}</button>
-          <button className="px-3 py-2 border rounded" onClick={async () => {
+          <button className="px-3 py-2 border rounded disabled:opacity-50" onClick={runAI} disabled={!providerAllowed} title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}>{t('button.runAI', { ns: 'editor' })}</button>
+          <button className="px-3 py-2 border rounded disabled:opacity-50" onClick={async () => {
             if (!doc || !lastAnchor) return
             const res = await api.aiRun('local', doc.id, prompt, lastAnchor.id)
             setAiOut(res.text)
-          }} disabled={!lastAnchor}>{t('button.runAIAnchor', { ns: 'editor' })}</button>
+          }} disabled={!lastAnchor || !providerAllowed} title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}>{t('button.runAIAnchor', { ns: 'editor' })}</button>
         </div>
         {aiOut && (
           <pre className="border rounded p-3 whitespace-pre-wrap text-sm">{aiOut}</pre>
