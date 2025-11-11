@@ -1,3 +1,16 @@
+//! Database layer: open and initialize SQLite, apply PRAGMAs, run schema DDL, and seed defaults.
+//!
+//! Responsibilities
+//! - Open the app database at a known path (dev: `.dev/agent-editor.db` unless `AE_DB` env is set)
+//! - Apply performance PRAGMAs (WAL, NORMAL sync) and enable foreign keys
+//! - Execute `schema.sql` (kept alongside sources) to create/upgrade tables
+//! - Seed provider rows with privacy-safe defaults (network off by default)
+//!
+//! See also:
+//! - `commands.rs` for Tauri IPC commands using this DB
+//! - `docs/manual/DATA_MODEL.md` for a high-level schema overview
+//! - `docs/guides/SCANNER.md` for scanner → DB write pipeline
+
 use parking_lot::Mutex;
 use rusqlite::Connection;
 
@@ -38,15 +51,3 @@ fn seed_providers(conn: &mut Connection) -> Result<(), Box<dyn std::error::Error
     }
     Ok(())
 }
-//! Database layer: open and initialize SQLite, apply PRAGMAs, run schema DDL, and seed defaults.
-//!
-//! Responsibilities
-//! - Open the app database at a known path (dev: `.dev/agent-editor.db` unless `AE_DB` env is set)
-//! - Apply performance PRAGMAs (WAL, NORMAL sync) and enable foreign keys
-//! - Execute `schema.sql` (kept alongside sources) to create/upgrade tables
-//! - Seed provider rows with privacy-safe defaults (network off by default)
-//!
-//! See also:
-//! - `commands.rs` for Tauri IPC commands using this DB
-//! - `docs/manual/DATA_MODEL.md` for a high-level schema overview
-//! - `docs/guides/SCANNER.md` for scanner → DB write pipeline
