@@ -2,6 +2,7 @@ import * as React from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
 import { AnchorsPanel } from '../features/editor/AnchorsPanel'
+import { useTranslation } from 'react-i18next'
 const EditorLazy = React.lazy(() => import('../features/editor/Editor').then(m => ({ default: m.Editor })))
 
 export const Route = createFileRoute('/doc/$id')({
@@ -9,6 +10,7 @@ export const Route = createFileRoute('/doc/$id')({
 })
 
 function DocPage() {
+  const { t } = useTranslation('editor')
   const { id } = Route.useParams()
   const [doc, setDoc] = React.useState<any>(null)
   const [body, setBody] = React.useState('')
@@ -97,32 +99,32 @@ function DocPage() {
     }
   }
 
-  if (!doc) return <main className="p-6">Loading…</main>
+  if (!doc) return <main className="p-6">{t('status.loading')}</main>
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">{doc.title || doc.slug}</h1>
       <div className="border rounded p-2" id="editor-container">
-        <React.Suspense fallback={<div className="text-sm text-gray-600">Loading editor…</div>}>
+        <React.Suspense fallback={<div className="text-sm text-gray-600">{t('status.loading')}</div>}>
           <EditorLazy value={body} onChange={setBody} docId={doc.id} onReady={(api) => (editorApiRef.current = api)} />
         </React.Suspense>
       </div>
       <div>
-        <button className="px-3 py-2 bg-black text-white rounded" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
-        <button className="ml-2 px-3 py-2 border rounded" onClick={insertAnchor}>Insert Anchor</button>
+        <button className="px-3 py-2 bg-black text-white rounded" onClick={save} disabled={saving}>{saving ? t('status.loading') : t('button.save')}</button>
+        <button className="ml-2 px-3 py-2 border rounded" onClick={insertAnchor}>{t('button.insertAnchor')}</button>
         {lastAnchor && (
-          <span className="ml-3 text-xs text-gray-600">Last anchor: {lastAnchor.id} (line {lastAnchor.line})</span>
+          <span className="ml-3 text-xs text-gray-600">{t('label.lastAnchor', { id: lastAnchor.id, line: lastAnchor.line })}</span>
         )}
       </div>
       <AnchorsPanel docId={doc.id} editorApiRef={editorApiRef as any} />
       <div className="space-y-2">
         <div className="flex gap-2">
-          <input className="border rounded px-3 py-2 w-full" placeholder="Prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} />
-          <button className="px-3 py-2 border rounded" onClick={runAI}>Run AI</button>
+          <input className="border rounded px-3 py-2 w-full" placeholder={t('placeholder.prompt')} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+          <button className="px-3 py-2 border rounded" onClick={runAI}>{t('button.runAI')}</button>
           <button className="px-3 py-2 border rounded" onClick={async () => {
             if (!doc || !lastAnchor) return
             const res = await api.aiRun('local', doc.id, prompt, lastAnchor.id)
             setAiOut(res.text)
-          }} disabled={!lastAnchor}>Run AI @Anchor</button>
+          }} disabled={!lastAnchor}>{t('button.runAIAnchor')}</button>
         </div>
         {aiOut && (
           <pre className="border rounded p-3 whitespace-pre-wrap text-sm">{aiOut}</pre>

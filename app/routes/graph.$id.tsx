@@ -1,12 +1,14 @@
 import * as React from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
+import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/graph/$id')({
   component: GraphPage,
 })
 
 function GraphPage() {
+  const { t } = useTranslation('graph')
   const { id } = Route.useParams()
   const [backlinks, setBacklinks] = React.useState<api.GraphDoc[]>([])
   const [neighbors, setNeighbors] = React.useState<api.GraphDoc[]>([])
@@ -45,13 +47,13 @@ function GraphPage() {
 
   return (
     <main className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">Graph</h1>
+      <h1 className="text-xl font-semibold">{t('title')}</h1>
       {loading ? <div>Loading…</div> : null}
       <section className="space-y-2">
-        <h2 className="font-semibold">Shortest Path</h2>
+        <h2 className="font-semibold">{t('shortestPath')}</h2>
         <div className="flex gap-2">
-          <input className="border rounded px-3 py-2 w-full" placeholder="Target doc id or slug" value={target} onChange={(e) => setTarget(e.target.value)} />
-          <button className="px-3 py-2 border rounded" onClick={computePath} disabled={!target}>Compute</button>
+          <input className="border rounded px-3 py-2 w-full" placeholder={t('placeholder.target')} value={target} onChange={(e) => setTarget(e.target.value)} />
+          <button className="px-3 py-2 border rounded" onClick={computePath} disabled={!target}>{t('button.compute')}</button>
         </div>
         {!!pathDocs.length && (
           <ol className="list-decimal pl-6 space-y-1">
@@ -64,7 +66,7 @@ function GraphPage() {
         )}
       </section>
       <section>
-        <h2 className="font-semibold mb-2">Backlinks</h2>
+        <h2 className="font-semibold mb-2">{t('backlinks')}</h2>
         <ul className="space-y-2">
           {backlinks.map((d) => (
             <li key={d.id} className="border rounded p-2">
@@ -75,9 +77,9 @@ function GraphPage() {
         </ul>
       </section>
       <section>
-        <h2 className="font-semibold mb-2">Neighbors</h2>
+        <h2 className="font-semibold mb-2">{t('neighbors')}</h2>
         <div className="mb-2 flex items-center gap-2 text-sm">
-          <label htmlFor="depth">Depth</label>
+          <label htmlFor="depth">{t('depth')}</label>
           <select id="depth" className="border rounded px-2 py-1" value={depth} onChange={(e) => setDepth(parseInt(e.target.value))}>
             <option value={1}>1</option>
             <option value={2}>2</option>

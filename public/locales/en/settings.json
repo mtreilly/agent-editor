@@ -1,0 +1,12 @@
+{
+  "providers": "Providers",
+  "status.loading": "Loading…",
+  "error.loadProviders": "Failed to load providers",
+  "th.name": "Name",
+  "th.kind": "Kind",
+  "th.enabled": "Enabled",
+  "th.action": "Action",
+  "button.enable": "Enable",
+  "button.disable": "Disable",
+  "status.noProviders": "No providers"
+}

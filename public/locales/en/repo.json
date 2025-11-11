@@ -1,0 +1,10 @@
+{
+  "addRepo": "Add Repository",
+  "placeholder.path": "/absolute/path",
+  "placeholder.name": "Optional name",
+  "button.add": "Add",
+  "repositories": "Repositories",
+  "scan": "Scan",
+  "remove": "Remove",
+  "scanEvent": "Scan: {{event}}"
+}

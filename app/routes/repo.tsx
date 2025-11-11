@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
+import { useTranslation } from 'react-i18next'
 import { listen } from '@tauri-apps/api/event'
 
 export const Route = createFileRoute('/repo')({
@@ -8,6 +9,7 @@ export const Route = createFileRoute('/repo')({
 })
 
 function RepoPage() {
+  const { t } = useTranslation('repo')
   const [path, setPath] = React.useState('')
   const [name, setName] = React.useState('')
   const [repos, setRepos] = React.useState<Array<{ id: string; name: string; path: string }>>([])
@@ -55,17 +57,17 @@ function RepoPage() {
   return (
     <main className="p-6 space-y-6">
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Add Repository</h2>
+        <h2 className="text-lg font-semibold">{t('addRepo')}</h2>
         <div className="flex gap-2">
-          <input className="border rounded px-3 py-2 w-1/2" placeholder="/absolute/path" value={path} onChange={(e) => setPath(e.target.value)} />
-          <input className="border rounded px-3 py-2 w-1/4" placeholder="Optional name" value={name} onChange={(e) => setName(e.target.value)} />
-          <button className="px-3 py-2 bg-black text-white rounded" onClick={add} disabled={loading}>Add</button>
+          <input className="border rounded px-3 py-2 w-1/2" placeholder={t('placeholder.path')} value={path} onChange={(e) => setPath(e.target.value)} />
+          <input className="border rounded px-3 py-2 w-1/4" placeholder={t('placeholder.name')} value={name} onChange={(e) => setName(e.target.value)} />
+          <button className="px-3 py-2 bg-black text-white rounded" onClick={add} disabled={loading}>{t('button.add')}</button>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Repositories</h2>
-        {lastEvt ? <div className="text-xs text-gray-600">Scan: {lastEvt}</div> : null}
+        <h2 className="text-lg font-semibold">{t('repositories')}</h2>
+        {lastEvt ? <div className="text-xs text-gray-600">{t('scanEvent', { event: lastEvt })}</div> : null}
         <ul className="space-y-2">
           {repos.map((r) => (
             <li key={r.id} className="border rounded p-3 flex items-center justify-between">
@@ -74,8 +76,8 @@ function RepoPage() {
                 <div className="text-xs text-gray-600">{r.path}</div>
               </div>
               <div className="flex gap-2">
-                <button className="px-2 py-1 border rounded" onClick={() => scan(r.path)} disabled={loading}>Scan</button>
-                <button className="px-2 py-1 border rounded text-red-600" onClick={() => remove(r.id)} disabled={loading}>Remove</button>
+                <button className="px-2 py-1 border rounded" onClick={() => scan(r.path)} disabled={loading}>{t('scan')}</button>
+                <button className="px-2 py-1 border rounded text-red-600" onClick={() => remove(r.id)} disabled={loading}>{t('remove')}</button>
               </div>
             </li>
           ))}

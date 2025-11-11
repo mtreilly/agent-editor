@@ -2,12 +2,14 @@ import * as React from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
 import { sanitizeHtml } from '../../src/app/sanitize'
+import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/search')({
   component: Search,
 })
 
 function Search() {
+  const { t } = useTranslation('search')
   const [q, setQ] = React.useState('')
   const [hits, setHits] = React.useState<api.SearchHit[]>([])
   const [loading, setLoading] = React.useState(false)
@@ -52,22 +54,22 @@ function Search() {
 
   return (
     <main className="p-6 space-y-4" onKeyDown={onKeyDown}>
-      <h1 className="text-xl font-semibold">Search</h1>
+      <h1 className="text-xl font-semibold">{t('title')}</h1>
       <div className="flex gap-2">
         <input
           className="border rounded px-3 py-2 w-full"
-          placeholder="Query"
+          placeholder={t('placeholder.query')}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onKeyDown}
           aria-label="Search query"
         />
         <button className="px-3 py-2 bg-black text-white rounded" onClick={run} disabled={loading}>
-          {loading ? 'Searching…' : 'Search'}
+          {loading ? t('status.searching') : t('button.search')}
         </button>
       </div>
       <div className="text-sm text-gray-600" aria-live="polite">
-        {hits.length ? `${hits.length} results` : loading ? 'Searching…' : 'No results'}
+        {hits.length ? t('status.count', { count: hits.length }) : loading ? t('status.searching') : t('status.noResults')}
       </div>
       <ul className="space-y-3" role="listbox" aria-label="Search results" aria-activedescendant={`hit-${active}`} ref={listRef}>
         {hits.map((h, i) => (

@@ -1,0 +1,10 @@
+{
+  "title": "Graph",
+  "shortestPath": "Shortest Path",
+  "placeholder.target": "Target doc id or slug",
+  "button.compute": "Compute",
+  "backlinks": "Backlinks",
+  "neighbors": "Neighbors",
+  "related": "Related",
+  "depth": "Depth"
+}

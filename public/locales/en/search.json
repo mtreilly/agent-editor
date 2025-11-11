@@ -1,0 +1,8 @@
+{
+  "title": "Search",
+  "placeholder.query": "Query",
+  "button.search": "Search",
+  "status.searching": "Searching…",
+  "status.noResults": "No results",
+  "status.count": "{{count}} results"
+}

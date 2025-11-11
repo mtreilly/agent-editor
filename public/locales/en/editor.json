@@ -1,0 +1,15 @@
+{
+  "anchors": "Anchors",
+  "button.addAnchor": "Add Anchor",
+  "button.jump": "Jump",
+  "button.copyLink": "Copy Link",
+  "button.remove": "Remove",
+  "status.noAnchors": "No anchors",
+  "status.loading": "Loading…",
+  "button.save": "Save",
+  "button.insertAnchor": "Insert Anchor",
+  "label.lastAnchor": "Last anchor: {{id}} (line {{line}})",
+  "button.runAI": "Run AI",
+  "button.runAIAnchor": "Run AI @Anchor",
+  "placeholder.prompt": "Prompt"
+}
