@@ -8,6 +8,7 @@
 - `pnpm tmux:bench` — FTS and scan benches
 - `pnpm tmux:provider-demo` — provider demo
 - `pnpm tmux:plugin-*-demo` — core plugin demos (rpc/net/db)
+- `pnpm tmux:plugin-log-smoke` — tails plugin-prefixed lines via CLI (`plugin events tail`), starts echo core, simulates crash to exercise auto-restart, and issues a follow-up call
 - `pnpm tmux:tauri-build` — package desktop
 - `pnpm tmux:ci-smoke` — smoke + e2e in headless panes
 

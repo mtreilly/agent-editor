@@ -23,6 +23,7 @@
     "tmux:plugin-rpc-demo": "bash scripts/tmux-plugin-rpc-demo.sh",
     "tmux:plugin-net-demo": "bash scripts/tmux-plugin-net-demo.sh",
     "tmux:plugin-db-demo": "bash scripts/tmux-plugin-db-demo.sh",
+    "tmux:plugin-log-smoke": "bash scripts/tmux-plugin-log-smoke.sh",
     "tmux:provider-demo": "bash scripts/tmux-provider-demo.sh",
     "tmux:bootstrap": "bash scripts/tmux-bootstrap.sh",
     "tmux:ci-smoke": "bash scripts/tmux-ci-smoke.sh",
