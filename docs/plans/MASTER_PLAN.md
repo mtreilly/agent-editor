@@ -662,6 +662,10 @@ Exit Criteria
 - Packaging:
   - Tmux packaging flow added; docs updated.
 
+### ElectricSQL Prep (deferred to M4)
+- Added `docs/guides/ELECTRIC.md` describing table mappings, conflict policies, and a staged integration plan.
+- Replication scope excludes derived tables (link, FTS) and secrets. `ai_trace` replication is optional/off by default.
+
 ### Core Plugin Demo
 - Added a simple echo-core Node plugin under `plugins/echo-core/echo.js` for local demos.
 - tmux demos:
