@@ -193,10 +193,10 @@ Rule of exposition: 1) Problem, 2) Correctness conditions, 3) Solution spec, 4) 
 ## Resource: export
 
 ### export docs
-- Problem: Export documents and metadata.
-- Correctness: Reproducible snapshots; includes versions optionally.
-- Solution: `agent-editor export docs [--repo <id>] [--format jsonl|tar] [--out <path>]`
-- Proof/tests: Schema validates; re-import produces identical rows.
+- Problem: Export documents and metadata (optionally attachments).
+- Correctness: Reproducible snapshots; includes versions/attachments when requested; tar archives contain `docs.json`, `versions.json`, doc Markdown files, `attachments/<slug-id>/<filename>`, and `meta.json`.
+- Solution: `agent-editor export docs [--repo <id>] [--format json|jsonl|tar] [--out <path>] [--include-attachments]`
+- Proof/tests: Schema validates; tar writer unit tests cover docs.json/meta.json/attachments; re-import round-trip identical, attachments restored when present.
 
 ### export db
 - Problem: Backup SQLite.
@@ -355,4 +355,3 @@ func main() {
 - Exit-code tests for error paths (usage, not_found, permission).
 - Contract conformance vs RPC schemas; offline tests using a stub RPC server.
 - Completions generation smoke tests for bash/zsh/fish.
-
