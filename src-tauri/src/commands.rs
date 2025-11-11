@@ -390,8 +390,28 @@ pub fn ai_run_core(db: &std::sync::Arc<Db>, req: AiRunRequest) -> Result<serde_j
     let context = extract_context(&body, line, 12);
     let redacted = redact(&context);
 
-    // Simulated provider response (echo)
-    let response_text = format!("[{}]\nPrompt: {}\n---\n{}", provider_name, req.prompt, redacted);
+    // Provider gating and simulated response (echo)
+    {
+        let conn = db.0.lock();
+        if let Ok((kind, enabled)) = conn.query_row(
+            "SELECT kind, enabled FROM provider WHERE name=?1",
+            rusqlite::params![&provider_name],
+            |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)),
+        ) {
+            if enabled == 0 { return Err("provider_disabled".into()); }
+            if kind == "remote" {
+                drop(conn);
+                if !crate::secrets::provider_key_exists(db, &provider_name)? {
+                    return Err("no_key".into());
+                }
+            }
+        }
+    }
+    let response_text = if provider_name == "openrouter" {
+        format!("[openrouter]\nPrompt: {}\n---\n{}", req.prompt, redacted)
+    } else {
+        format!("[{}]\nPrompt: {}\n---\n{}", provider_name, req.prompt, redacted)
+    };
 
     // Persist ai_trace
     let conn = db.0.lock();
