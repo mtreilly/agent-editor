@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/agent-editor/agent-editor/cli/internal/config"
 	"github.com/agent-editor/agent-editor/cli/internal/output"
@@ -21,8 +22,15 @@ func importCmd() *cobra.Command {
 			newRepo, _ := cmd.Flags().GetString("new-repo")
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			mergeStrategy, _ := cmd.Flags().GetString("merge-strategy")
+			mergeStrategy = strings.ToLower(mergeStrategy)
+			if repo == "" && newRepo == "" {
+				return fmt.Errorf("specify --repo or --new-repo")
+			}
 			if repo != "" && newRepo != "" {
 				return fmt.Errorf("--repo and --new-repo are mutually exclusive")
+			}
+			if mergeStrategy != "keep" && mergeStrategy != "overwrite" {
+				return fmt.Errorf("invalid --merge-strategy %s", mergeStrategy)
 			}
 			cfg := config.Load()
 			cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
@@ -46,7 +54,7 @@ func importCmd() *cobra.Command {
 	}
 	docs.Flags().String("repo", "", "Existing repo to import into")
 	docs.Flags().String("new-repo", "", "Create a new repo for import")
-	docs.Flags().Bool("dry-run", false, "Validate without writing to DB")
+	docs.Flags().Bool("dry-run", true, "Validate without writing to DB (set --dry-run=false to apply)")
 	docs.Flags().String("merge-strategy", "keep", "Conflict strategy: keep|overwrite")
 
 	importRoot.AddCommand(docs)

@@ -49,3 +49,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Tar hydration
 - Tar importer now hydrates missing doc bodies from `docs/<slug-id>.md`, matching the CLI’s filename sanitizer/truncation so long slugs resolve.
 - Added regression test to ensure Markdown fallbacks stay wired; errors surface early if both docs.json and the tar snapshot omit content.
+
+## 2025-11-11 — Import CLI defaults
+- CLI `agent-editor import docs` now defaults to `--dry-run=true` to match the RPC/manual behavior.
+- Guides updated to remind operators to pass `--dry-run=false` when applying mutations.
