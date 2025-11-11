@@ -20,5 +20,7 @@
   "label.disabled": "Disabled",
   "label.allowed": "Allowed",
   "hint.enableProvider": "Enable provider and set key to use",
-  "hint.setKey": "Enter API key to save"
+  "hint.setKey": "Enter API key to save",
+  "hint.providerHelp": "Need help configuring providers? Read the troubleshooting guide.",
+  "hint.providerHelpLink": "Providers troubleshooting guide"
 }

@@ -4,7 +4,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 
 ## 2025-11-11 — Providers polish
 - Clarified OpenRouter adapter usage (keys, model config, allowlist).
-- Next: add provider troubleshooting to in-app Help tooltip on /settings/providers.
+- Added troubleshooting/help link on /settings/providers pointing to the Providers guide.
 
 ## 2025-11-11 — Plugin lifecycle
 - Core plugins now auto-restart (3x, exp backoff) and log prefixed stderr/stdout lines to .sidecar.log.

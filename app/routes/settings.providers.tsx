@@ -16,6 +16,7 @@ function ProvidersSettings() {
   const [keys, setKeys] = React.useState<Record<string, { has: boolean; value: string }>>({})
   const [globalDefault, setGlobalDefault] = React.useState<string>('local')
   const [models, setModels] = React.useState<Record<string, string>>({})
+  const providerHelpHref = 'https://github.com/agent-editor/agent-editor/blob/main/docs/guides/PROVIDERS.md#troubleshooting'
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -83,7 +84,22 @@ function ProvidersSettings() {
 
   return (
     <main className="p-6 space-y-4">
-      <h1 className="text-xl font-semibold">{t('providers')}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">{t('providers')}</h1>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <a
+            href={providerHelpHref}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 underline"
+          >
+            {t('hint.providerHelpLink', { defaultValue: 'Providers troubleshooting guide' })}
+          </a>
+          <Hint id="providers-help" className="text-xs text-gray-500">
+            {t('hint.providerHelp', { defaultValue: 'Need help configuring keys or models? The guide covers common fixes.' })}
+          </Hint>
+        </div>
+      </div>
       <section className="space-y-2">
         <div className="flex items-center gap-2">
           <span className="text-sm">{t('globalDefaultProvider') || 'Global default provider'}:</span>
