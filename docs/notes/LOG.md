@@ -65,3 +65,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Import attachments
 - Tar archives can now include `attachments/<slug-id>/<filename>`; importer stores them in `doc_asset` with inferred MIME types and binary blobs.
 - Added schema table, helper functions, and tests verifying attachment ingestion plus manual updates covering the format.
+
+## 2025-11-11 — Export attachments
+- CLI tar exports now include attachment files, and the RPC surfaces attachment metadata/base64 so other formats can consume them.
+- Added Go tar test plus docs updates covering the archive layout.

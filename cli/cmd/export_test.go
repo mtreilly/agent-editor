@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"archive/tar"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"os"
@@ -14,7 +15,23 @@ func TestWriteDocsTar(t *testing.T) {
 	dir := t.TempDir()
 	tarPath := filepath.Join(dir, "docs.tar")
 	docs := []map[string]interface{}{
-		{"id": "d1", "slug": "one", "title": "One", "body": "# One", "versions": []interface{}{map[string]interface{}{"id": "v1", "hash": "h1"}}},
+		{
+			"id":    "d1",
+			"slug":  "one",
+			"title": "One",
+			"body":  "# One",
+			"versions": []interface{}{
+				map[string]interface{}{"id": "v1", "hash": "h1"},
+			},
+			"attachments": []interface{}{
+				map[string]interface{}{
+					"filename":    "logo.png",
+					"mime":        "image/png",
+					"encoding":    "binary",
+					"data_base64": base64.StdEncoding.EncodeToString([]byte{0x89, 0x50, 0x4E, 0x47}),
+				},
+			},
+		},
 		{"id": "d2", "slug": "two", "title": "Two", "body": "# Two"},
 	}
 	if err := writeDocsTar(tarPath, docs); err != nil {
@@ -30,6 +47,7 @@ func TestWriteDocsTar(t *testing.T) {
 	seenMeta := false
 	seenVersions := false
 	seenFiles := 0
+	seenAttachments := 0
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
@@ -78,10 +96,21 @@ func TestWriteDocsTar(t *testing.T) {
 				}
 				continue
 			}
+			if strings.HasPrefix(hdr.Name, "attachments/") {
+				seenAttachments++
+				data, err := io.ReadAll(tr)
+				if err != nil {
+					t.Fatalf("read attachment file: %v", err)
+				}
+				if len(data) == 0 {
+					t.Fatalf("attachment file %s empty", hdr.Name)
+				}
+				continue
+			}
 			t.Fatalf("unexpected tar entry %s", hdr.Name)
 		}
 	}
-	if !seenDocs || !seenMeta || !seenVersions || seenFiles == 0 {
-		t.Fatalf("expected docs.json, versions.json, meta.json, and docs/*.md entries")
+	if !seenDocs || !seenMeta || !seenVersions || seenFiles == 0 || seenAttachments == 0 {
+		t.Fatalf("expected docs.json, versions.json, meta.json, docs/*.md, and attachments entries")
 	}
 }

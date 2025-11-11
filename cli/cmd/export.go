@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -54,6 +55,9 @@ func exportCmd() *cobra.Command {
 		}
 		if includeVersionsFlag {
 			params["include_versions"] = true
+		}
+		if format == "tar" {
+			params["include_attachments"] = true
 		}
 		var res []map[string]interface{}
 		if err := cli.Call(ctx, "export_docs", params, &res); err != nil {
@@ -126,7 +130,7 @@ func exportCmd() *cobra.Command {
 
 var sanitizedFilename = regexp.MustCompile(`[^a-zA-Z0-9-_]`)
 
-func safeDocFilename(id, slug string) string {
+func docSlugKey(id, slug string) string {
 	slug = strings.ToLower(slug)
 	slug = sanitizedFilename.ReplaceAllString(slug, "-")
 	if slug == "" {
@@ -135,7 +139,11 @@ func safeDocFilename(id, slug string) string {
 	if len(slug) > 40 {
 		slug = slug[:40]
 	}
-	return fmt.Sprintf("docs/%s-%s.md", slug, id)
+	return fmt.Sprintf("%s-%s", slug, id)
+}
+
+func safeDocFilename(id, slug string) string {
+	return fmt.Sprintf("docs/%s.md", docSlugKey(id, slug))
 }
 
 func writeDocsTar(out string, docs []map[string]interface{}) error {
@@ -209,6 +217,45 @@ func writeDocsTar(out string, docs []map[string]interface{}) error {
 			return err
 		}
 		if _, err := tw.Write(content); err != nil {
+			return err
+		}
+		if err := writeDocAttachmentsTar(tw, doc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeDocAttachmentsTar(tw *tar.Writer, doc map[string]interface{}) error {
+	attachments, ok := doc["attachments"].([]interface{})
+	if !ok || len(attachments) == 0 {
+		return nil
+	}
+	id, _ := doc["id"].(string)
+	slug, _ := doc["slug"].(string)
+	slugKey := docSlugKey(id, slug)
+	for _, raw := range attachments {
+		payload, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		filename, _ := payload["filename"].(string)
+		if filename == "" {
+			continue
+		}
+		data, _ := payload["data_base64"].(string)
+		if data == "" {
+			continue
+		}
+		bytes, err := base64.StdEncoding.DecodeString(data)
+		if err != nil {
+			return err
+		}
+		path := fmt.Sprintf("attachments/%s/%s", slugKey, filename)
+		if err := tw.WriteHeader(&tar.Header{Name: path, Mode: 0o600, Size: int64(len(bytes))}); err != nil {
+			return err
+		}
+		if _, err := tw.Write(bytes); err != nil {
 			return err
 		}
 	}

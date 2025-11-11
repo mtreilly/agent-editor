@@ -823,6 +823,17 @@ pub struct DocExportRow {
     pub is_deleted: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub versions: Option<Vec<DocVersionExport>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attachments: Option<Vec<DocAttachmentExport>>,
+}
+
+#[derive(Serialize)]
+pub struct DocAttachmentExport {
+    pub doc_id: String,
+    pub filename: String,
+    pub mime: String,
+    pub encoding: String,
+    pub data_base64: String,
 }
 
 fn export_docs_sql(include_deleted: bool, with_repo: bool) -> String {
@@ -901,10 +912,48 @@ fn fetch_doc_versions(conn: &Connection, doc_ids: &[String]) -> Result<HashMap<S
     Ok(map)
 }
 
+fn fetch_doc_attachments(conn: &Connection, doc_ids: &[String]) -> Result<HashMap<String, Vec<DocAttachmentExport>>, String> {
+    if doc_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let mut map: HashMap<String, Vec<DocAttachmentExport>> = HashMap::new();
+    let mut stmt = conn
+        .prepare(
+            "SELECT a.doc_id, a.filename, a.mime, b.encoding, b.content \
+             FROM doc_asset a JOIN doc_blob b ON b.id = a.blob_id \
+             WHERE a.doc_id IN (SELECT value FROM json_each(?1)) \
+             ORDER BY a.created_at",
+        )
+        .map_err(|e| e.to_string())?;
+    let ids_json = serde_json::to_string(doc_ids).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![ids_json], |r| {
+            let doc_id: String = r.get(0)?;
+            let filename: String = r.get(1)?;
+            let mime: String = r.get(2)?;
+            let encoding: String = r.get(3)?;
+            let content: Vec<u8> = r.get(4)?;
+            Ok((doc_id, filename, mime, encoding, content))
+        })
+        .map_err(|e| e.to_string())?;
+    for row in rows {
+        let (doc_id, filename, mime, encoding, content) = row.map_err(|e| e.to_string())?;
+        map.entry(doc_id.clone()).or_default().push(DocAttachmentExport {
+            doc_id,
+            filename,
+            mime,
+            encoding,
+            data_base64: STANDARD.encode(content),
+        });
+    }
+    Ok(map)
+}
+
 #[tauri::command]
-pub async fn export_docs(repo_id: Option<String>, include_deleted: Option<bool>, include_versions: Option<bool>, db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<DocExportRow>, String> {
+pub async fn export_docs(repo_id: Option<String>, include_deleted: Option<bool>, include_versions: Option<bool>, include_attachments: Option<bool>, db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<DocExportRow>, String> {
     let include_deleted = include_deleted.unwrap_or(false);
     let include_versions = include_versions.unwrap_or(false);
+    let include_attachments = include_attachments.unwrap_or(false);
     let conn = db.0.lock();
     let mut docs = fetch_doc_exports(&conn, repo_id.as_deref(), include_deleted)?;
     if include_versions && !docs.is_empty() {
@@ -913,6 +962,15 @@ pub async fn export_docs(repo_id: Option<String>, include_deleted: Option<bool>,
         for doc in docs.iter_mut() {
             if let Some(list) = version_map.get(&doc.id) {
                 doc.versions = Some(list.clone());
+            }
+        }
+    }
+    if include_attachments && !docs.is_empty() {
+        let ids: Vec<String> = docs.iter().map(|d| d.id.clone()).collect();
+        let attachment_map = fetch_doc_attachments(&conn, &ids)?;
+        for doc in docs.iter_mut() {
+            if let Some(list) = attachment_map.get(&doc.id) {
+                doc.attachments = Some(list.clone());
             }
         }
     }

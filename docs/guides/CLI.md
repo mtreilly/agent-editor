@@ -53,6 +53,7 @@ agent-editor export docs --out docs.jsonl --format jsonl
 agent-editor export docs --out docs.tar --format tar --include-versions  # includes docs.json, versions.json, meta.json, docs/*.md
 agent-editor export db --out backup/agent-editor.db
 ```
+> Tar exports also bundle `attachments/<slug-id>/<filename>` entries for any doc assets, so imports can restore binaries losslessly.
 
 ## Transport
 - CLI talks to the JSON-RPC sidecar at `http://127.0.0.1:35678/rpc`.
