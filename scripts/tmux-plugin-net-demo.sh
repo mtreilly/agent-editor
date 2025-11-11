@@ -30,5 +30,8 @@ tmux split-window -v -t "$SESSION":0.0
 tmux send-keys -t "$SESSION":0.2 'tail -f .sidecar.log' C-m
 
 tmux select-layout -t "$SESSION":0 tiled
-tmux attach -t "$SESSION"
-
+if [[ -n "${HEADLESS:-}" ]]; then
+  echo "[tmux-plugin-net-demo] HEADLESS set; not attaching to tmux session '$SESSION'" >&2
+else
+  tmux attach -t "$SESSION"
+fi

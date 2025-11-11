@@ -1,36 +1,42 @@
 #!/usr/bin/env node
-// Simple echo core plugin: reads lines from stdin and writes JSON responses to stdout
+// Simple echo core plugin: reads JSON-RPC lines on stdin and writes responses on stdout.
+// Supported methods (stubbed): fs.read, net.request, db.query, db.writeInsert, ai.invoke
+
 const readline = require('readline')
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: false })
-rl.on('line', async (line) => {
-  const trimmed = (line || '').trim()
-  if (!trimmed) return
-  let obj
-  try { obj = JSON.parse(trimmed) } catch { obj = null }
-  if (obj && obj.jsonrpc === '2.0' && obj.method) {
-    const { id, method, params } = obj
-    try {
-      if (method === 'fs.read') {
-        const fs = require('fs')
-        const p = params && params.path
-        const content = fs.readFileSync(p, 'utf8')
-        process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result: { content } }) + '\n')
-      } else if (method === 'net.request') {
-        const url = params && params.url
-        // demo: just echo the URL back; host enforces domain allowlist
-        process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result: { url, status: 'ok' } }) + '\n')
-      } else if (method === 'db.query') {
-        const sql = params && params.sql
-        // demo: emit a deterministic stub result
-        process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result: { rows: [{ ok: true, sql }] } }) + '\n')
-      } else {
-        process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32601, message: 'Method not found' } }) + '\n')
-      }
-    } catch (e) {
-      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32000, message: String(e && e.message || e) } }) + '\n')
+
+const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity })
+
+function respond(id, result, error) {
+  const out = error ? { jsonrpc: '2.0', id, error: { code: -32000, message: String(error) } } : { jsonrpc: '2.0', id, result }
+  process.stdout.write(JSON.stringify(out) + '\n')
+}
+
+rl.on('line', (line) => {
+  if (!line.trim()) return
+  let msg
+  try { msg = JSON.parse(line) } catch { return respond(null, null, 'invalid_json') }
+  const id = msg.id ?? null
+  const method = msg.method || ''
+  const params = msg.params || {}
+  try {
+    switch (true) {
+      case method.startsWith('fs.read'):
+        return respond(id, { ok: true, kind: 'fs.read', path: params.path || '' })
+      case method.startsWith('net.request'):
+        return respond(id, { ok: true, kind: 'net.request', url: params.url || '' })
+      case method.startsWith('db.query'):
+        return respond(id, { ok: true, kind: 'db.query', rows: [] })
+      case method.startsWith('db.write'):
+        return respond(id, { ok: true, kind: 'db.write', affected: 1 })
+      case method.startsWith('ai.invoke'):
+        return respond(id, { ok: true, kind: 'ai.invoke', text: 'echo' })
+      default:
+        return respond(id, { ok: true, echo: { method, params } })
     }
-    return
+  } catch (e) {
+    return respond(id, null, e.message || String(e))
   }
-  const msg = { ok: true, echo: trimmed }
-  process.stdout.write(JSON.stringify(msg) + '\n')
 })
+
+rl.on('close', () => process.exit(0))
+
