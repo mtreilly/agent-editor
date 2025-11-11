@@ -137,6 +137,20 @@ mod tests_perm {
     }
 
     #[test]
+    fn redact_common_secrets() {
+        // AWS AKIA and bearer tokens should be masked
+        let input = "AWS key AKIAABCDEFGHIJKLMNOP token: Bearer abcdefghijklmnopqrstuvwxyz0123456789";
+        let out = super::redact(input);
+        assert!(!out.contains("AKIAABCDEFGHIJKLMNOP"));
+        assert!(out.to_lowercase().contains("bearer ****"));
+
+        // Query params
+        let input2 = "https://example.com/?token=SeCrEtToKeN123456&x=1";
+        let out2 = super::redact(input2);
+        assert!(out2.contains("token=****"));
+    }
+
+    #[test]
     fn invalid_envelope_missing_method() {
         let db = test_db();
         insert_plugin(&db, "p7", 1, r#"{"core":{"call":1}}"#);
@@ -946,10 +960,42 @@ fn extract_context(body: &str, line: usize, n: usize) -> String {
 }
 
 fn redact(s: &str) -> String {
+    use regex::Regex;
     let mut out = s.to_string();
-    // simple patterns
-    out = out.replace("AKIA", "****");
-    out = out.replace("api_key", "****");
+    // AWS Access Key IDs (AKIA/ASIAxxxxxxxxxxxxxxxx)
+    let re_aws_ak = Regex::new(r"(?i)\b(AKIA|ASIA)[0-9A-Z]{16}\b").unwrap();
+    out = re_aws_ak.replace_all(&out, "****").to_string();
+
+    // AWS Secret Access Key (40 chars base64-like)
+    let re_aws_sk = Regex::new(r"(?i)(aws[_-]?secret[_-]?access[_-]?key\s*[:=]\s*['\"]?)([A-Za-z0-9/+=]{40})").unwrap();
+    out = re_aws_sk.replace_all(&out, "$1****").to_string();
+
+    // Bearer tokens
+    let re_bearer = Regex::new(r"(?i)\b(bearer)\s+[A-Za-z0-9_\-\.]{16,}\b").unwrap();
+    out = re_bearer.replace_all(&out, "$1 ****").to_string();
+
+    // Generic api key/token param
+    let re_key_param = Regex::new(r"(?i)(api[_-]?key|apikey|token|auth)_?id?\s*[:=]\s*['\"]?([A-Za-z0-9_\-]{16,})").unwrap();
+    out = re_key_param.replace_all(&out, "$1=****").to_string();
+
+    // URL query params ?key=..., &token=
+    let re_query = Regex::new(r"([?&](?:key|api[_-]?key|token)=[^&\s]{4,})").unwrap();
+    out = re_query.replace_all(&out, |caps: &regex::Captures| {
+        let s = &caps[1];
+        let k = s.split('=').next().unwrap_or("key");
+        format!("{}=****", k)
+    }).to_string();
+
+    // High-entropy generic tokens: long hex/base64ish words (fallback)
+    let re_entropy = Regex::new(r"\b[A-Za-z0-9/_\+=]{24,}\b").unwrap();
+    out = re_entropy.replace_all(&out, |m: &regex::Captures| {
+        let t = &m[0];
+        // Avoid redacting typical prose by requiring mixed char classes
+        let has_alpha = t.chars().any(|c| c.is_ascii_alphabetic());
+        let has_digit = t.chars().any(|c| c.is_ascii_digit());
+        if has_alpha && has_digit { "****".to_string() } else { t.to_string() }
+    }).to_string();
+
     out
 }
 
