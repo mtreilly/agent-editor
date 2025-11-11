@@ -57,3 +57,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Import progress
 - Added backend progress events every 25 docs plus final status; CLI tails a temporary log and prints `[import] STATUS processed/total inserted=…` lines in real time.
 - Docs describe the streaming behavior; follow-up: consider piping structured progress to JSON output mode.
+
+## 2025-11-11 — Import dedupe
+- Overwrite imports now hash bodies and skip writing when content matches the current version, preventing redundant doc_version rows.
+- Added regression test and docs/manual update so behavior stays visible.

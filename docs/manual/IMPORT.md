@@ -56,7 +56,7 @@ Both dry runs and real imports return a structured summary (printed by the CLI):
 
 ## Merge Strategy
 - `keep`: existing `repo+slug` rows are left untouched and counted under `skipped`.
-- `overwrite`: existing docs are updated in place, a new version/blob is created, FTS rows are rebuilt, and provenance is recorded.
+- `overwrite`: existing docs are updated in place, a new version/blob is created, FTS rows are rebuilt, and provenance is recorded. When the incoming body matches the current version hash, the importer skips the update to avoid redundant versions (counts under `skipped`).
 
 ## Current Limitations / Next Work
 - Attachments and binary blobs are not yet restored (pending blob storage work).

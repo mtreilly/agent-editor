@@ -55,6 +55,7 @@ Completed
 - CLI Export: `agent-editor export docs` (`--format json|jsonl|tar`, tar/jsonl require `--out`, tar auto-includes `--include-versions`) + `agent-editor export db`; Go tar tests cover archive layout.
 - CLI Import: `agent-editor import docs` now parses json/jsonl/tar archives, supports dry-run, merge strategies, repo creation, provenance, and round-trip tests to keep versions/FTS/link data consistent.
 - CLI Import UX: progress events stream every ~25 docs so CLI shows `[import] …` lines while long imports run, preventing silent waits.
+- Import dedupe: overwrite strategy hashes bodies and skips writing doc_version rows when content is unchanged, keeping history lean.
 - CLI Reliability: CLI source now imports using module path so `go test ./cli/...` runs (fixes ai command braces and tar export tests).
 
 Bench targets (current phase)

@@ -527,6 +527,38 @@ mod tests_import {
     }
 
     #[test]
+    fn import_docs_dedup_overwrite_skips_identical_content() {
+        let db = test_db();
+        {
+            let conn = db.0.lock();
+            insert_doc(&conn, "repo_dedupe", "guide", "Guide", "# Body", false);
+        }
+        {
+            let conn = db.0.lock();
+            let summary = import_docs_apply(
+                &conn,
+                vec![import_row("# Body", "identical")],
+                Some("repo_dedupe".into()),
+                None,
+                false,
+                "overwrite",
+                "import.json",
+                None,
+            )
+            .unwrap();
+            assert_eq!(summary["skipped"].as_u64().unwrap(), 1);
+            let version_count: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM doc_version WHERE doc_id=(SELECT id FROM doc WHERE repo_id=?1 AND slug='guide')",
+                    params!["repo_dedupe"],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(version_count, 1);
+        }
+    }
+
+    #[test]
     fn import_docs_writes_progress_file() {
         let db = test_db();
         let docs = vec![DocImportRow {
@@ -640,8 +672,7 @@ pub async fn docs_create(payload: DocCreate, db: State<'_, std::sync::Arc<Db>>) 
         params![doc_id, payload.repo_id, tx.last_insert_rowid(), payload.slug, payload.title, payload.body.len() as i64, payload.body.lines().count() as i64])
         .map_err(|e| e.to_string())?;
     tx.execute("INSERT INTO doc_blob(id,content,size_bytes) VALUES(?,?,?)", params![blob_id, payload.body.as_bytes(), payload.body.len() as i64]).map_err(|e| e.to_string())?;
-    let body_hash = blake3::hash(payload.body.as_bytes()).to_hex().to_string();
-    let version_hash = format!("{}:{}", doc_id, body_hash);
+    let version_hash = doc_version_hash(&doc_id, &payload.body);
     tx.execute("INSERT INTO doc_version(id,doc_id,blob_id,hash) VALUES(?,?,?,?)", params![version_id, doc_id, blob_id, version_hash]).map_err(|e| e.to_string())?;
     tx.execute("UPDATE doc SET current_version_id=?1 WHERE id=?2", params![version_id, doc_id]).map_err(|e| e.to_string())?;
     // FTS update
@@ -662,8 +693,7 @@ pub struct DocUpdate { pub doc_id: String, pub body: String, pub message: Option
 #[tauri::command]
 pub async fn docs_update(payload: DocUpdate, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let mut conn = db.0.lock();
-    let body_hash = blake3::hash(payload.body.as_bytes()).to_hex().to_string();
-    let version_hash = format!("{}:{}", &payload.doc_id, body_hash);
+    let version_hash = doc_version_hash(&payload.doc_id, &payload.body);
     // Check if same as current
     let unchanged: bool = conn.query_row(
         "SELECT v.hash FROM doc d JOIN doc_version v ON v.id=d.current_version_id WHERE d.id=?1",
@@ -1123,6 +1153,10 @@ fn import_doc_record(
                 stats.skipped += 1;
                 return Ok(());
             }
+            if content_matches_current(conn, &doc_id, &body)? {
+                stats.skipped += 1;
+                return Ok(());
+            }
             update_doc_record(conn, &doc_id, repo_id, &slug, &title, &body, is_deleted, message.as_deref(), import_path)?;
             stats.updated += 1;
         }
@@ -1186,6 +1220,24 @@ fn update_doc_record(
     Ok(())
 }
 
+fn doc_version_hash(doc_id: &str, body: &str) -> String {
+    let body_hash = blake3::hash(body.as_bytes()).to_hex().to_string();
+    format!("{doc_id}:{body_hash}")
+}
+
+fn content_matches_current(conn: &Connection, doc_id: &str, body: &str) -> Result<bool, String> {
+    let new_hash = doc_version_hash(doc_id, body);
+    let existing: Option<String> = conn
+        .query_row(
+            "SELECT v.hash FROM doc d JOIN doc_version v ON v.id=d.current_version_id WHERE d.id=?1",
+            params![doc_id],
+            |r| r.get(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+    Ok(existing.map(|h| h == new_hash).unwrap_or(false))
+}
+
 fn write_doc_version(conn: &Connection, doc_id: &str, body: &str, message: Option<&str>) -> Result<(), String> {
     let blob_id = Uuid::new_v4().to_string();
     conn.execute(
@@ -1193,11 +1245,11 @@ fn write_doc_version(conn: &Connection, doc_id: &str, body: &str, message: Optio
         params![blob_id, body.as_bytes(), body.len() as i64],
     )
     .map_err(|e| e.to_string())?;
-    let hash = blake3::hash(body.as_bytes()).to_hex().to_string();
+    let hash = doc_version_hash(doc_id, body);
     let version_id = Uuid::new_v4().to_string();
     conn.execute(
         "INSERT INTO doc_version(id,doc_id,blob_id,hash,message,created_at) VALUES(?,?,?,?,?,datetime('now'))",
-        params![version_id, doc_id, blob_id, format!("{doc_id}:{hash}"), message.unwrap_or("")],
+        params![version_id, doc_id, blob_id, hash, message.unwrap_or("")],
     )
     .map_err(|e| e.to_string())?;
     conn.execute(

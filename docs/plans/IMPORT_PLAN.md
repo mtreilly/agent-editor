@@ -33,4 +33,4 @@
 - ✅ Hydrate doc bodies from `docs/*.md` when `docs.json` omits content (tar fallback).
 - [ ] Add attachment/blob support once binary-friendly doc_blob lands.
  - ✅ Stream progress + stats back to CLI (per ~25 docs) for large archives.
-- [ ] Consider hash-based dedupe to skip writing identical versions.
+- ✅ Hash-based dedupe: overwrite imports compare version hashes and skip writing identical content.
