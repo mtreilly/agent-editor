@@ -53,6 +53,7 @@ func rootCmd() *cobra.Command {
     cmd.AddCommand(serveCmd())
     cmd.AddCommand(exportCmd())
     cmd.AddCommand(configCmd())
+    cmd.AddCommand(settingsCmd())
     cmd.AddCommand(completionCmd(cmd))
     cmd.AddCommand(versionCmd())
 

@@ -136,6 +136,17 @@ func repoCmd() *cobra.Command {
         },
     }
 
-    repo.AddCommand(add, scan, list, info, remove)
+    // default-provider
+    dp := &cobra.Command{Use: "default-provider", Short: "Manage repo default AI provider"}
+    dpSet := &cobra.Command{Use: "set <name|id> <provider>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load(); cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx, cancel := context.WithTimeout(cmd.Context(), cfg.Timeout); defer cancel()
+        var res map[string]interface{}
+        if err := cli.Call(ctx, "repos_set_default_provider", map[string]interface{}{"id_or_name": args[0], "provider": args[1]}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+    dp.AddCommand(dpSet)
+
+    repo.AddCommand(add, scan, list, info, remove, dp)
     return repo
 }
