@@ -8,7 +8,7 @@ use uuid::Uuid;
 use std::collections::HashMap;
 use std::process::{Child, ChildStdin, ChildStdout, Command as OsCommand, Stdio};
 use std::sync::{Mutex, OnceLock};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::io::{Write, BufRead, BufReader};
 
 #[derive(Deserialize)]
@@ -531,6 +531,30 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
             )
             .unwrap_or(0);
         if allowed == 0 { return Err("forbidden".into()); }
+    }
+    // FS roots allowlist: when calling fs.* methods, enforce that params.path is under one of permissions.fs.roots
+    if method.starts_with("fs.") {
+        let params_v = parsed.get("params").cloned().unwrap_or(serde_json::json!({}));
+        let req_path = params_v.get("path").and_then(|v| v.as_str()).unwrap_or("");
+        if !req_path.is_empty() {
+            let conn = db.0.lock();
+            let perms_json: Option<String> = conn.query_row("SELECT permissions FROM plugin WHERE name=?1", params![name], |r| r.get(0)).ok();
+            let mut allowed = false;
+            if let Some(pj) = perms_json {
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&pj) {
+                    if let Some(arr) = val.get("fs").and_then(|fs| fs.get("roots")).and_then(|r| r.as_array()) {
+                        let target_canon: PathBuf = Path::new(req_path).canonicalize().unwrap_or_else(|_| PathBuf::from(req_path));
+                        for root in arr {
+                            if let Some(root_s) = root.as_str() {
+                                let root_canon: PathBuf = Path::new(root_s).canonicalize().unwrap_or_else(|_| PathBuf::from(root_s));
+                                if target_canon.starts_with(&root_canon) { allowed = true; break; }
+                            }
+                        }
+                    }
+                }
+            }
+            if !allowed { return Err("forbidden_fs_root".into()); }
+        }
     }
     static REG: OnceLock<Mutex<HashMap<String, CoreProc>>> = OnceLock::new();
     let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));

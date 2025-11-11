@@ -22,7 +22,7 @@ tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin enable echo" C-m
 tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin start-core echo --exec node -- plugins/echo-core/echo.js" C-m
 sleep 1
 tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin call-core echo '{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"fs.read\",\"params\":{\"path\":\"README.md\"}}'" C-m
-tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin perms set echo --json '{\"core\":{\"call\":true},\"fs\":{\"read\":true}}'" C-m
+tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin perms set echo --json '{\"core\":{\"call\":true},\"fs\":{\"read\":true,\"roots\":[\".\"]}}'" C-m
 tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin call-core echo '{\"jsonrpc\":\"2.0\",\"id\":\"2\",\"method\":\"fs.read\",\"params\":{\"path\":\"README.md\"}}'" C-m
 
 # Pane 2: Logs
@@ -31,4 +31,3 @@ tmux send-keys -t "$SESSION":0.2 'tail -f .sidecar.log' C-m
 
 tmux select-layout -t "$SESSION":0 tiled
 tmux attach -t "$SESSION"
-
