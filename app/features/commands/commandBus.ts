@@ -1,13 +1,24 @@
 export type Command = { id: string; title: string; run: () => void | Promise<void> }
 
-let registry: Command[] = []
+let baseRegistry: Command[] = []
+const extraRegistries = new Map<string, Command[]>()
 
 export function setCommands(cmds: Command[]) {
-  registry = cmds
+  baseRegistry = cmds
+}
+
+export function registerCommands(owner: string, cmds: Command[]) {
+  extraRegistries.set(owner, cmds)
+}
+
+export function unregisterCommands(owner: string) {
+  extraRegistries.delete(owner)
 }
 
 export function getCommands(): Command[] {
-  return registry
+  const extras: Command[] = []
+  for (const arr of extraRegistries.values()) extras.push(...arr)
+  return [...baseRegistry, ...extras]
 }
 
 export function builtinCommands(navigate: (to: string) => void): Command[] {
@@ -17,4 +28,3 @@ export function builtinCommands(navigate: (to: string) => void): Command[] {
     { id: 'nav.settings.providers', title: 'Settings: Providers', run: () => navigate('/settings/providers') },
   ]
 }
-

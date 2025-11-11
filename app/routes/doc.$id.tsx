@@ -2,6 +2,7 @@ import * as React from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
 import { AnchorsPanel } from '../features/editor/AnchorsPanel'
+import { registerCommands, unregisterCommands } from '../features/commands/commandBus'
 import { useTranslation } from 'react-i18next'
 const EditorLazy = React.lazy(() => import('../features/editor/Editor').then(m => ({ default: m.Editor })))
 
@@ -57,6 +58,27 @@ function DocPage() {
     container.addEventListener('wiki:navigate', handler as EventListener)
     return () => container.removeEventListener('wiki:navigate', handler as EventListener)
   }, [navigate])
+
+  // Register command palette action for AI run on this doc
+  React.useEffect(() => {
+    if (!doc) return
+    const owner = `doc-${doc.id}`
+    registerCommands(owner, [
+      {
+        id: 'ai.run.doc',
+        title: 'AI: Run on current doc',
+        run: async () => {
+          try {
+            const res = await api.aiRun('default', doc.id, prompt || 'Explain this document')
+            alert(res.text)
+          } catch (e: any) {
+            alert(`AI run failed: ${e?.message || e}`)
+          }
+        },
+      },
+    ])
+    return () => unregisterCommands(owner)
+  }, [doc, prompt])
 
   // If ?anchor= is present in URL, jump to it once editor is ready
   React.useEffect(() => {
