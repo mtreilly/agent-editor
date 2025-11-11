@@ -11,7 +11,9 @@ use std::collections::HashMap;
 use std::process::{Child, ChildStdin, ChildStdout, Command as OsCommand, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::path::{Path, PathBuf};
-use std::io::{Write, BufRead, BufReader};
+use std::io::{Write, BufRead, BufReader, Read};
+use std::fs::File;
+use tar::Archive;
 
 #[derive(Deserialize)]
 pub struct ScanFilters { pub include: Option<Vec<String>>, pub exclude: Option<Vec<String>> }
@@ -578,6 +580,68 @@ pub async fn export_docs(repo_id: Option<String>, include_deleted: Option<bool>,
     Ok(docs)
 }
 
+fn read_docs_from_json(path: &Path) -> Result<Vec<DocImportRow>, String> {
+    let data = std::fs::read(path).map_err(|e| e.to_string())?;
+    serde_json::from_slice(&data).map_err(|e| e.to_string())
+}
+
+fn read_docs_from_jsonl(path: &Path) -> Result<Vec<DocImportRow>, String> {
+    let file = File::open(path).map_err(|e| e.to_string())?;
+    let reader = BufReader::new(file);
+    let mut docs = Vec::new();
+    for line in reader.lines() {
+        let line = line.map_err(|e| e.to_string())?;
+        if line.trim().is_empty() { continue; }
+        let doc: DocImportRow = serde_json::from_str(&line).map_err(|e| e.to_string())?;
+        docs.push(doc);
+    }
+    Ok(docs)
+}
+
+fn read_docs_from_tar(path: &Path) -> Result<Vec<DocImportRow>, String> {
+    let file = File::open(path).map_err(|e| e.to_string())?;
+    let mut archive = Archive::new(file);
+    let mut docs_buf = Vec::new();
+    let mut versions_buf = Vec::new();
+    for entry in archive.entries().map_err(|e| e.to_string())? {
+        let mut entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path().map_err(|e| e.to_string())?.into_owned();
+        let name = path.to_string_lossy().to_string();
+        if name == "docs.json" {
+            entry.read_to_end(&mut docs_buf).map_err(|e| e.to_string())?;
+        } else if name == "versions.json" {
+            entry.read_to_end(&mut versions_buf).map_err(|e| e.to_string())?;
+        }
+    }
+    if docs_buf.is_empty() {
+        return Err("docs.json missing from archive".into());
+    }
+    let mut docs: Vec<DocImportRow> = serde_json::from_slice(&docs_buf).map_err(|e| e.to_string())?;
+    if !versions_buf.is_empty() {
+        #[derive(Deserialize)]
+        struct VersionBundle { doc_id: String, versions: Vec<DocVersionImport> }
+        let bundles: Vec<VersionBundle> = serde_json::from_slice(&versions_buf).map_err(|e| e.to_string())?;
+        let mut map: HashMap<String, Vec<DocVersionImport>> = HashMap::new();
+        for b in bundles { map.insert(b.doc_id, b.versions); }
+        for doc in docs.iter_mut() {
+            if let Some(vs) = map.remove(doc.id.as_deref().unwrap_or("")) {
+                doc.versions = Some(vs);
+            }
+        }
+    }
+    Ok(docs)
+}
+
+fn read_docs_from_path(path: &Path) -> Result<Vec<DocImportRow>, String> {
+    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+    match ext {
+        "json" => read_docs_from_json(path),
+        "jsonl" => read_docs_from_jsonl(path),
+        "tar" | "tgz" => read_docs_from_tar(path),
+        _ => read_docs_from_json(path),
+    }
+}
+
 #[tauri::command]
 pub async fn export_db(out_path: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let dest = PathBuf::from(out_path);
@@ -610,18 +674,20 @@ pub struct ImportDocsPayload {
 
 #[tauri::command]
 pub async fn import_docs(payload: ImportDocsPayload) -> Result<serde_json::Value, String> {
-    let strategy = payload.merge_strategy.unwrap_or_else(|| "keep".to_string());
     if payload.repo_id.is_some() && payload.new_repo_name.is_some() {
         return Err("repo_id and new_repo_name are mutually exclusive".into());
     }
-    Ok(serde_json::json!({
+    let docs = read_docs_from_path(Path::new(&payload.path))?;
+    let summary = serde_json::json!({
         "path": payload.path,
+        "doc_count": docs.len(),
         "repo_id": payload.repo_id,
         "new_repo_name": payload.new_repo_name,
-        "dry_run": payload.dry_run.unwrap_or(false),
-        "merge_strategy": strategy,
-        "status": "not_implemented",
-    }))
+        "dry_run": payload.dry_run.unwrap_or(true),
+        "merge_strategy": payload.merge_strategy.unwrap_or_else(|| "keep".to_string()),
+        "status": "dry_run_only",
+    });
+    Ok(summary)
 }
 
 #[derive(Serialize)]
@@ -1422,3 +1488,22 @@ pub async fn anchors_delete(anchor_id: String, db: State<'_, std::sync::Arc<Db>>
 //! - Redaction unit tests
 //!
 //! See docs: `docs/manual/RPC.md` and `docs/guides/CODEMAP.md`.
+#[derive(Deserialize)]
+struct DocVersionImport {
+    id: Option<String>,
+    hash: Option<String>,
+    created_at: Option<String>,
+    message: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct DocImportRow {
+    id: Option<String>,
+    repo_id: Option<String>,
+    slug: String,
+    title: Option<String>,
+    body: Option<String>,
+    is_deleted: Option<bool>,
+    updated_at: Option<String>,
+    versions: Option<Vec<DocVersionImport>>,
+}

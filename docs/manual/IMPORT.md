@@ -20,7 +20,7 @@ agent-editor import docs <path> [--repo <id>|--new-repo <name>] [--dry-run] [--m
   - `overwrite` replaces existing docs/versions.
 
 ## RPC Surface
-- `import_docs` (stubbed): accepts `{path, repo_id?, new_repo_name?, dry_run?, merge_strategy?}`.
+- `import_docs`: accepts `{path, repo_id?, new_repo_name?, dry_run?, merge_strategy?}` and currently returns a dry-run summary (no DB writes yet).
 - Future implementation will stream archive contents, stage mutations in a transaction, and emit provenance records (`source='import'`).
 
 ## TODO
