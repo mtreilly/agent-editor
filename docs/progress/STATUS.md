@@ -45,7 +45,8 @@ Completed
 - Packaging: tmux packaging script added (`pnpm tmux:tauri-build`); BUILD guide updated
 - Docs: Added CODEMAP, PLUGINS, PROVIDERS, RPC, DATA_MODEL, DEVELOPMENT, CI, CONFIG, TROUBLESHOOTING, ROUTING, SCANNER, TESTING; README updated with links; IPC stubs manual.
  - Docs: Added CODEMAP, PLUGINS, PROVIDERS, RPC, DATA_MODEL, DEVELOPMENT, CI, CONFIG, TROUBLESHOOTING, ROUTING, SCANNER, TESTING; README updated with links; IPC stubs manual.
- - Docs polish (M3): Enforced Vibe Discord notifications (start/progress/done) in AGENTS.md and added `guides/VIBE_NOTIFICATIONS.md`; scripts guide updated with headless fallback.
+- Docs polish (M3): Enforced Vibe Discord notifications (start/progress/done) in AGENTS.md and added `guides/VIBE_NOTIFICATIONS.md`; scripts guide updated with headless fallback.
+ - CI/perf: `ci:bench` now asserts scan throughput (docs/sec) from `bench-scan.sh`; configurable via `SCAN_DOCS_PER_SEC_MIN`.
 
 Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset
