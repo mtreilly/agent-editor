@@ -44,6 +44,13 @@ func pluginCmd() *cobra.Command {
     }}
     call := &cobra.Command{Use: "call <name> <method>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error { return output.Print("not implemented", "text") }}
 
+    callCore := &cobra.Command{Use: "call-core <name> <line>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load(); cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background(); var res map[string]interface{}
+        if err := cli.Call(ctx, "plugins_call_core", map[string]interface{}{"name": args[0], "line": args[1]}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+
     startCore := &cobra.Command{Use: "start-core <name> --exec <path> [-- <args>...]", Args: cobra.MinimumNArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
         execPath, _ := cmd.Flags().GetString("exec")
         if execPath == "" { return fmt.Errorf("--exec is required") }
@@ -67,6 +74,6 @@ func pluginCmd() *cobra.Command {
     eventsTail := &cobra.Command{Use: "tail", RunE: func(cmd *cobra.Command, args []string) error { fmt.Println("plugin events tail (stub)"); return nil }}
     events.AddCommand(eventsTail)
 
-    plugin.AddCommand(install, list, info, remove, enable, disable, call, startCore, stopCore, events)
+    plugin.AddCommand(install, list, info, remove, enable, disable, call, callCore, startCore, stopCore, events)
     return plugin
 }

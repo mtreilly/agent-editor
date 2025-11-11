@@ -50,6 +50,7 @@ fn main() {
             commands::plugins_enable,
             commands::plugins_disable,
             commands::plugins_remove,
+            commands::plugins_call_core,
             commands::plugins_spawn_core,
             commands::plugins_shutdown_core,
             commands::anchors_upsert,

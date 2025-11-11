@@ -5,9 +5,10 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 use std::collections::HashMap;
-use std::process::{Child, Command as OsCommand, Stdio};
+use std::process::{Child, ChildStdin, ChildStdout, Command as OsCommand, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::path::Path;
+use std::io::{Write, BufRead, BufReader};
 
 #[derive(Deserialize)]
 pub struct ScanFilters { pub include: Option<Vec<String>>, pub exclude: Option<Vec<String>> }
@@ -440,10 +441,12 @@ pub async fn plugins_remove(name: String, db: State<'_, std::sync::Arc<Db>>) -> 
     Ok(serde_json::json!({"removed": n>0}))
 }
 
-// -------- Core Plugin spawn/stop (stubs) ---------
+// -------- Core Plugin spawn/stop/call ---------
+struct CoreProc { child: Child, stdin: Option<ChildStdin>, stdout: Option<BufReader<ChildStdout>> }
+
 #[tauri::command]
 pub async fn plugins_spawn_core(name: String, exec: String, args: Option<Vec<String>>) -> Result<serde_json::Value, String> {
-    static REG: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
+    static REG: OnceLock<Mutex<HashMap<String, CoreProc>>> = OnceLock::new();
     let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));
     let mut map = reg.lock().map_err(|_| "lock_poison")?;
     if map.contains_key(&name) {
@@ -451,24 +454,49 @@ pub async fn plugins_spawn_core(name: String, exec: String, args: Option<Vec<Str
     }
     let mut cmd = OsCommand::new(&exec);
     if let Some(a) = args.as_ref() { cmd.args(a); }
-    let child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
+    let mut child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
         .spawn().map_err(|e| e.to_string())?;
     let pid = child.id();
-    map.insert(name.clone(), child);
+    let stdin = child.stdin.take();
+    let stdout = child.stdout.take().map(BufReader::new);
+    map.insert(name.clone(), CoreProc { child, stdin, stdout });
     Ok(serde_json::json!({"pid": pid}))
 }
 
 #[tauri::command]
 pub async fn plugins_shutdown_core(name: String) -> Result<serde_json::Value, String> {
-    static REG: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
+    static REG: OnceLock<Mutex<HashMap<String, CoreProc>>> = OnceLock::new();
     let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));
     let mut map = reg.lock().map_err(|_| "lock_poison")?;
-    if let Some(mut ch) = map.remove(&name) {
-        let _ = ch.kill();
-        let _ = ch.wait();
+    if let Some(mut proc) = map.remove(&name) {
+        let _ = proc.child.kill();
+        let _ = proc.child.wait();
         return Ok(serde_json::json!({"stopped": true}));
     }
     Ok(serde_json::json!({"stopped": false}))
+}
+
+#[tauri::command]
+pub async fn plugins_call_core(name: String, line: String) -> Result<serde_json::Value, String> {
+    static REG: OnceLock<Mutex<HashMap<String, CoreProc>>> = OnceLock::new();
+    let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut map = reg.lock().map_err(|_| "lock_poison")?;
+    if let Some(proc) = map.get_mut(&name) {
+        if let Some(stdin) = proc.stdin.as_mut() {
+            stdin.write_all(line.as_bytes()).map_err(|e| e.to_string())?;
+            stdin.write_all(b"\n").map_err(|e| e.to_string())?;
+            stdin.flush().ok();
+        } else { return Err("stdin_closed".into()); }
+        if let Some(stdout) = proc.stdout.as_mut() {
+            let mut buf = String::new();
+            stdout.read_line(&mut buf).map_err(|e| e.to_string())?;
+            let trimmed = buf.trim();
+            if trimmed.is_empty() { return Ok(serde_json::json!({"ok": true})); }
+            let val: serde_json::Value = serde_json::from_str(trimmed).unwrap_or(serde_json::json!({"line": trimmed}));
+            return Ok(val);
+        } else { return Err("stdout_closed".into()); }
+    }
+    Err("not_found".into())
 }
 
 // -------- AI Providers ---------

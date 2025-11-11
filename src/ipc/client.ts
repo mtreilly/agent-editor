@@ -112,3 +112,4 @@ export const aiProviderKeyGet = (name: string) => safeInvoke<{ has_key: boolean 
 export const pluginsSpawnCore = (name: string, exec: string, args?: string[]) =>
   safeInvoke<{ ok?: boolean }>('plugins_spawn_core', { name, exec, args })
 export const pluginsShutdownCore = (name: string) => safeInvoke<{ ok?: boolean }>('plugins_shutdown_core', { name })
+export const pluginsCallCore = (name: string, line: string) => safeInvoke<any>('plugins_call_core', { name, line })
