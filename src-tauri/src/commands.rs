@@ -307,6 +307,7 @@ mod tests_import {
     use crate::db::open_db;
     use std::fs::File;
     use std::sync::Arc;
+    use tar::Builder;
 
     fn test_db() -> Arc<Db> {
         let p = std::env::temp_dir().join(format!("ae-import-test-{}.db", uuid::Uuid::new_v4()));
@@ -398,6 +399,50 @@ mod tests_import {
                 .unwrap();
             assert_eq!(provenance_count, 1);
         }
+    }
+
+    #[test]
+    fn read_docs_from_tar_hydrates_missing_body() {
+        let tar_path = std::env::temp_dir().join(format!("ae-import-docs-body-{}.tar", uuid::Uuid::new_v4()));
+        let doc_id = uuid::Uuid::new_v4().to_string();
+        let slug = "Guides/Getting Started!!!";
+        let body = "# Imported body\n\nDetails";
+        {
+            let file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(file);
+
+            let docs_payload = serde_json::json!([{
+                "id": doc_id,
+                "repo_id": "repo_tar",
+                "slug": slug,
+                "title": "Guide",
+                "body": serde_json::Value::Null,
+                "is_deleted": false
+            }]);
+            append_tar_bytes(&mut builder, "docs.json", serde_json::to_vec(&docs_payload).unwrap().as_slice());
+            append_tar_bytes(
+                &mut builder,
+                "meta.json",
+                serde_json::to_vec(&serde_json::json!({"doc_count": 1, "format": "json"})).unwrap().as_slice(),
+            );
+            let filename = format!("docs/{}-{}.md", sanitize_slug_for_filename(slug), doc_id);
+            append_tar_bytes(&mut builder, &filename, body.as_bytes());
+            builder.finish().unwrap();
+        }
+
+        let docs = read_docs_from_tar(&tar_path).unwrap();
+        assert_eq!(docs.len(), 1);
+        assert_eq!(docs[0].body.as_deref(), Some(body));
+    }
+
+    fn append_tar_bytes(builder: &mut Builder<File>, name: &str, data: &[u8]) {
+        let mut header = tar::Header::new_gnu();
+        header.set_path(name).unwrap();
+        header.set_size(data.len() as u64);
+        header.set_mode(0o600);
+        header.set_mtime(0);
+        header.set_cksum();
+        builder.append(&header, data).unwrap();
     }
 
     fn import_row(body: &str, message: &str) -> DocImportRow {
@@ -777,11 +822,47 @@ fn read_docs_from_jsonl(path: &Path) -> Result<Vec<DocImportRow>, String> {
     Ok(docs)
 }
 
+fn sanitize_slug_for_filename(slug: &str) -> String {
+    let mut sanitized: String = slug
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    if sanitized.is_empty() {
+        sanitized = "doc".into();
+    } else {
+        sanitized = sanitized.to_lowercase();
+    }
+    if sanitized.len() > 40 {
+        sanitized.truncate(40);
+    }
+    sanitized
+}
+
+fn parse_doc_filename_keys(stem: &str) -> (Option<String>, Option<String>) {
+    if let Some(idx) = stem.rfind('-') {
+        let candidate = &stem[idx + 1..];
+        if candidate.len() == 36 && Uuid::parse_str(candidate).is_ok() {
+            let slug_part = stem[..idx].to_string();
+            let slug_key = if slug_part.is_empty() { None } else { Some(slug_part) };
+            return (Some(candidate.to_string()), slug_key);
+        }
+    }
+    (None, if stem.is_empty() { None } else { Some(stem.to_string()) })
+}
+
 fn read_docs_from_tar(path: &Path) -> Result<Vec<DocImportRow>, String> {
     let file = File::open(path).map_err(|e| e.to_string())?;
     let mut archive = Archive::new(file);
     let mut docs_buf = Vec::new();
     let mut versions_buf = Vec::new();
+    let mut body_by_id: HashMap<String, String> = HashMap::new();
+    let mut body_by_slug: HashMap<String, String> = HashMap::new();
     for entry in archive.entries().map_err(|e| e.to_string())? {
         let mut entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path().map_err(|e| e.to_string())?.into_owned();
@@ -790,6 +871,25 @@ fn read_docs_from_tar(path: &Path) -> Result<Vec<DocImportRow>, String> {
             entry.read_to_end(&mut docs_buf).map_err(|e| e.to_string())?;
         } else if name == "versions.json" {
             entry.read_to_end(&mut versions_buf).map_err(|e| e.to_string())?;
+        } else if name.starts_with("docs/") && name.ends_with(".md") {
+            let mut buf = Vec::new();
+            entry.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+            if buf.is_empty() {
+                continue;
+            }
+            let body = String::from_utf8(buf).map_err(|e| e.to_string())?;
+            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
+            if stem.is_empty() {
+                continue;
+            }
+            let (doc_id_key, slug_key_hint) = parse_doc_filename_keys(&stem);
+            if let Some(doc_id) = doc_id_key {
+                body_by_id.insert(doc_id, body.clone());
+            }
+            let slug_key = slug_key_hint.unwrap_or(stem);
+            if !slug_key.is_empty() {
+                body_by_slug.insert(slug_key, body);
+            }
         }
     }
     if docs_buf.is_empty() {
@@ -807,6 +907,24 @@ fn read_docs_from_tar(path: &Path) -> Result<Vec<DocImportRow>, String> {
                 doc.versions = Some(vs);
             }
         }
+    }
+    for doc in docs.iter_mut() {
+        let has_body = doc.body.as_ref().map(|b| !b.is_empty()).unwrap_or(false);
+        if has_body {
+            continue;
+        }
+        if let Some(ref doc_id) = doc.id {
+            if let Some(body) = body_by_id.remove(doc_id) {
+                doc.body = Some(body);
+                continue;
+            }
+        }
+        let slug_key = sanitize_slug_for_filename(&doc.slug);
+        if let Some(body) = body_by_slug.remove(&slug_key) {
+            doc.body = Some(body);
+            continue;
+        }
+        return Err(format!("doc {} missing body in docs.json and docs/*.md", doc.slug));
     }
     Ok(docs)
 }

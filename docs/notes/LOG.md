@@ -44,4 +44,8 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Import pipeline
 - `import_docs` RPC now applies json/jsonl/tar archives, honors dry-run by default, and enforces merge strategies (keep/overwrite).
 - New repo creation + folder scaffolding happen inside the import transaction; updates refresh FTS/link/provenance rows and attach a new version blob per doc.
-- Added Rust round-trip tests plus CLI manual updates; TODO: extend parser to hydrate bodies from `docs/*.md` when missing and add attachment support when blob storage lands.
+- Added Rust round-trip tests plus CLI manual updates; next focus is attachment/blob handling once the binary-friendly doc_blob work lands.
+
+## 2025-11-11 — Tar hydration
+- Tar importer now hydrates missing doc bodies from `docs/<slug-id>.md`, matching the CLI’s filename sanitizer/truncation so long slugs resolve.
+- Added regression test to ensure Markdown fallbacks stay wired; errors surface early if both docs.json and the tar snapshot omit content.

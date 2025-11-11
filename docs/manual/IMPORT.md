@@ -23,8 +23,9 @@ agent-editor import docs <path> [--repo <id> | --new-repo <name>] \
 2. Resolve the repo target:
    - existing repo (`--repo`) must exist;
    - new repo path stored under `.import/<slugified-name>`.
-3. For dry runs, count inserts/updates/skips via `simulate_import`.
-4. For real imports, run a single DB transaction that:
+3. For tar archives, hydrate missing doc bodies by loading the matching `docs/<slug-id>.md` snapshot (slug sanitation matches exporter rules, so long names/characters resolve correctly). If the Markdown file is missing, the import fails early with a helpful error.
+4. For dry runs, count inserts/updates/skips via `simulate_import`.
+5. For real imports, run a single DB transaction that:
    - inserts or updates `doc`, `doc_version`, and `doc_blob`;
    - refreshes `doc_fts` rows and rebuilds wiki-link edges;
    - writes provenance records with `source='import'` and `{path}` metadata.
