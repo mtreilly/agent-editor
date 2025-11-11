@@ -6,6 +6,8 @@ Thanks for your interest! This project aims for small, clear changes with strong
 - Read `docs/guides/CODEMAP.md` to orient.
 - Use tmux scripts (`AGENTS.md` → Vibe + Tmux) for dev/test.
 - Run `HEADLESS=1 pnpm tmux:e2e` and `pnpm tmux:smoke` before submitting.
+ - See `docs/guides/FEATURE_HOWTO.md` for an end‑to‑end checklist.
+ - Follow `docs/guides/A11Y.md`.
 
 ## Conventions
 - Conventional commits: `feat(scope): ...`, `fix(scope): ...`, `docs(scope): ...`.

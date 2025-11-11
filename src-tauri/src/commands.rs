@@ -1036,3 +1036,22 @@ pub async fn anchors_delete(anchor_id: String, db: State<'_, std::sync::Arc<Db>>
         .map_err(|e| e.to_string())?;
     Ok(serde_json::json!({"deleted": n>0}))
 }
+//! Tauri IPC command handlers and helpers.
+//!
+//! This module exposes the app's capabilities to the UI via Tauri `#[command]` functions
+//! and to the JSON-RPC sidecar (reusing the same core logic). Keep signatures small and
+//! typed, release DB locks quickly, and return structured JSON or serializable structs.
+//!
+//! Groups:
+//! - repos_*: add/list/info/remove/set_default_provider
+//! - docs_*: create/update/get/delete; search and graph_* (neighbors/backlinks/related/path)
+//! - ai_*: run, providers (list/enable/disable), keys, model get/set, resolve
+//! - plugins_*: list/info/enable/disable/remove/upsert; spawn/shutdown/call; core_list
+//! - anchors_*: upsert/list/delete
+//!
+//! Tests:
+//! - Permission gating (plugins_call_core_check)
+//! - Provider gating and missing key cases
+//! - Redaction unit tests
+//!
+//! See docs: `docs/manual/RPC.md` and `docs/guides/CODEMAP.md`.

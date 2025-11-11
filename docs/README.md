@@ -4,6 +4,7 @@ Quick links to essential documentation:
 
 Guides
 - Code Map: `guides/CODEMAP.md`
+ - Feature How-To: `guides/FEATURE_HOWTO.md`
 - Routing: `guides/ROUTING.md`
 - Development: `guides/DEVELOPMENT.md`
 - CI: `guides/CI.md`
