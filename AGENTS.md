@@ -125,7 +125,7 @@ logging:
   - Benchmarks: `pnpm tmux:bench`, Scan bench: `pnpm bench:scan`
   - Provider demos: `pnpm tmux:provider-demo`
   - Bootstrap (install + check + CLI build): `pnpm tmux:bootstrap`
-  - Packaging: `pnpm tmux:tauri-build`
+- Packaging: `pnpm tmux:tauri-build`
 
 ### Code Map (Quick)
 - Tauri core (Rust): `src-tauri/src/{db.rs,commands.rs,api.rs,scan/,graph/,ai/,secrets.rs,plugins/}`
@@ -146,8 +146,16 @@ logging:
   - Start: `pnpm vibe:start`
   - Progress: `pnpm vibe:progress`
   - Done: `pnpm vibe:done`
+  - Direct CLI fallback (when tmux is unavailable): `vibe discord message send --content "..."` (uses default channel from config)
 - Headless CI/agent usage: set `HEADLESS=1` to skip `tmux attach` when supported by the script.
 - Convention: each long-lived service (sidecar, web, logs) uses its own window; ephemeral commands (builds, tests) run in a split pane within a dedicated window.
+
+#### Notification Templates (use/adapt)
+- Start: `vibe discord message send --content "agent-editor: Starting [task] on [branch] (Context [X]%)."`
+- Progress: `vibe discord message send --content "agent-editor: [task] [step]/[total] — [short note]."`
+- Done: `vibe discord message send --content "agent-editor: Completed [task] — [result/commit short hash]."`
+
+See also: `docs/guides/VIBE_NOTIFICATIONS.md` for configuration, examples, and troubleshooting.
 
 ### Testing
 - Unit tests: `*.test.ts(x)` files alongside implementation

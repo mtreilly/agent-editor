@@ -13,3 +13,4 @@
 
 ## vibe notifications
 - `pnpm vibe:start|progress|done` — send Discord messages (set `VIBE_CHANNEL` if needed).
+- CI/headless fallback: `vibe discord message send --content "..."` (uses default channel from config)

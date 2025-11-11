@@ -26,7 +26,7 @@
     "tmux:provider-demo": "bash scripts/tmux-provider-demo.sh",
     "tmux:bootstrap": "bash scripts/tmux-bootstrap.sh",
     "tmux:ci-smoke": "bash scripts/tmux-ci-smoke.sh",
-    "ci:bench": "bash scripts/bench-fts.sh the 50 | node scripts/ci-bench-assert.mjs"
+    "ci:bench": "bash scripts/bench-fts.sh the 50 | node scripts/ci-bench-assert.mjs",
     "tmux:tauri-build": "bash scripts/tmux-tauri-build.sh",
     "bench:fts": "bash scripts/bench-fts.sh the 50",
     "bench:scan": "bash scripts/bench-scan.sh",

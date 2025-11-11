@@ -11,6 +11,7 @@ Guides
 - Build & Package: `guides/BUILD.md`
 - Smoke: `guides/SMOKE.md`
 - Testing: `guides/TESTING.md`
+ - Vibe Notifications: `guides/VIBE_NOTIFICATIONS.md`
 - Scanner internals: `guides/SCANNER.md`
 - Providers: `guides/PROVIDERS.md`
 - Plugins: `guides/PLUGINS.md`
