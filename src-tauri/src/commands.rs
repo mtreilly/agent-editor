@@ -360,6 +360,64 @@ fn parse_anchor_line(anchor_id: &str) -> Option<usize> {
     } else { None }
 }
 
+// -------- Plugins (DB-backed) ---------
+#[tauri::command]
+pub async fn plugins_list(db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<serde_json::Value>, String> {
+    let conn = db.0.lock();
+    let mut stmt = conn.prepare("SELECT id,name,version,kind,enabled FROM plugin ORDER BY name ASC").map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |r| Ok(serde_json::json!({
+        "id": r.get::<_, String>(0)?,
+        "name": r.get::<_, String>(1)?,
+        "version": r.get::<_, String>(2)?,
+        "kind": r.get::<_, String>(3)?,
+        "enabled": r.get::<_, i64>(4)? != 0
+    }))).map_err(|e| e.to_string())?;
+    let mut out = Vec::new();
+    for r in rows { out.push(r.map_err(|e| e.to_string())?) }
+    Ok(out)
+}
+
+#[tauri::command]
+pub async fn plugins_enable(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let n = conn.execute("UPDATE plugin SET enabled=1 WHERE name=?1", params![name]).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"updated": n>0}))
+}
+
+#[tauri::command]
+pub async fn plugins_disable(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let n = conn.execute("UPDATE plugin SET enabled=0 WHERE name=?1", params![name]).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"updated": n>0}))
+}
+
+#[tauri::command]
+pub async fn plugins_info(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let mut stmt = conn.prepare("SELECT id,name,version,kind,manifest,permissions,enabled,installed_at FROM plugin WHERE name=?1").map_err(|e| e.to_string())?;
+    let mut rows = stmt.query(params![name]).map_err(|e| e.to_string())?;
+    if let Some(r) = rows.next().map_err(|e| e.to_string())? {
+        return Ok(serde_json::json!({
+            "id": r.get::<_, String>(0).unwrap_or_default(),
+            "name": r.get::<_, String>(1).unwrap_or_default(),
+            "version": r.get::<_, String>(2).unwrap_or_default(),
+            "kind": r.get::<_, String>(3).unwrap_or_default(),
+            "manifest": r.get::<_, String>(4).unwrap_or_default(),
+            "permissions": r.get::<_, String>(5).unwrap_or_default(),
+            "enabled": r.get::<_, i64>(6).unwrap_or(0) != 0,
+            "installed_at": r.get::<_, String>(7).unwrap_or_default(),
+        }))
+    }
+    Err("not_found".into())
+}
+
+#[tauri::command]
+pub async fn plugins_remove(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let n = conn.execute("DELETE FROM plugin WHERE name=?1", params![name]).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"removed": n>0}))
+}
+
 // -------- AI Providers ---------
 #[derive(Serialize)]
 pub struct ProviderRow { pub name: String, pub kind: String, pub enabled: bool }

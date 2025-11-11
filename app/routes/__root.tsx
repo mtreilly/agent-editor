@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { CommandPalette } from '../features/commands/CommandPalette'
 
 export const Route = createRootRoute({
   component: Root,
@@ -22,6 +23,7 @@ function Root() {
         </nav>
       </header>
       <Outlet />
+      <CommandPalette />
     </div>
   )
 }

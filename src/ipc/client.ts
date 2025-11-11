@@ -99,3 +99,9 @@ export const aiProvidersEnable = (name: string) => safeInvoke<{ updated: boolean
 export const aiProvidersDisable = (name: string) => safeInvoke<{ updated: boolean }>('ai_providers_disable', { name })
 
 export const ipcCall = <T = any>(method: string, params?: any) => safeInvoke<T>(method, params)
+
+export const pluginsList = () => safeInvoke<Array<{ id: string; name: string; version: string; kind: string; enabled: boolean }>>('plugins_list')
+export const pluginsInfo = (name: string) => safeInvoke<any>('plugins_info', { name })
+export const pluginsEnable = (name: string) => safeInvoke<{ updated: boolean }>('plugins_enable', { name })
+export const pluginsDisable = (name: string) => safeInvoke<{ updated: boolean }>('plugins_disable', { name })
+export const pluginsRemove = (name: string) => safeInvoke<{ removed: boolean }>('plugins_remove', { name })
