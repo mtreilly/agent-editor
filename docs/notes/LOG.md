@@ -75,3 +75,6 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 
 ## 2025-11-11 — CLI tests
 - `go test ./...` currently fails because the repo doesn’t have a `go.mod`; add a module before expanding Go-based test coverage.
+
+## 2025-11-11 — Go workspace
+- Added `go.work` pointing at `./cli` so `go test ./cli/...` works from repo root; go version pinned to 1.22.0 to match CLI module requirements.
