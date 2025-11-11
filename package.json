@@ -16,7 +16,10 @@
     "test:e2e": "playwright test",
     "smoke:cli": "bash scripts/cli-smoke.sh",
     "tmux:dev": "bash scripts/tmux-dev.sh",
-    "tmux:smoke": "bash scripts/tmux-smoke.sh"
+    "tmux:smoke": "bash scripts/tmux-smoke.sh",
+    "tmux:bench": "bash scripts/tmux-bench.sh",
+    "bench:fts": "bash scripts/bench-fts.sh the 50",
+    "bench:scan": "bash scripts/bench-scan.sh"
   },
   "dependencies": {
     "@milkdown/core": "^7.17.1",
