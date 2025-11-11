@@ -285,6 +285,13 @@ pnpm preview                      # Preview production build
   - `pnpm tmux:e2e` — web dev server + Playwright tests
   - `pnpm tmux:bootstrap` — installs deps (pnpm), runs cargo check and CLI build in panes
   - `pnpm vibe:start` / `pnpm vibe:progress` / `pnpm vibe:done` — send Discord notifications via vibe CLI in a tmux session (requires `vibe` installed; otherwise logs locally)
+
+## Notifications (Mandatory)
+- Always send a Discord message via vibe CLI when you start, periodically during work, and when you finish:
+  - Start: `pnpm vibe:start`
+  - Progress: `pnpm vibe:progress`
+  - Done: `pnpm vibe:done`
+- These commands run inside tmux and invoke `vibe discord send`. Set `VIBE_CHANNEL` to target a specific Discord channel. If `vibe` is not installed, the script logs locally.
 - If tmux is unavailable, install it or run an equivalent multi‑pane terminal.
 
 ## Multi-Agent Collaboration
