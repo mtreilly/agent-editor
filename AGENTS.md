@@ -126,6 +126,22 @@ logging:
   - Provider demos: `pnpm tmux:provider-demo`
   - Bootstrap (install + check + CLI build): `pnpm tmux:bootstrap`
   - Packaging: `pnpm tmux:tauri-build`
+
+### Code Map (Quick)
+- Tauri core (Rust): `src-tauri/src/{db.rs,commands.rs,api.rs,scan/,graph/,ai/,secrets.rs,plugins/}`
+  - `db.rs` opens SQLite, seeds providers
+  - `commands.rs` Tauri IPC commands (repos/docs/search/graph/ai/providers/plugins/anchors)
+  - `api.rs` JSON-RPC sidecar (127.0.0.1:35678/rpc)
+  - `scan` scanner + watcher; `graph` link derivation + queries; `ai` provider adapters; `secrets` key facade
+- Frontend (React): `app/` routes + features
+  - `app/routes` Start-style route files; `features/` editor, commands, etc.
+  - `src/ipc/client.ts` unified IPC with web stubs for tests
+- CLI (Go): `cli/` cobra-based; `cli/internal/rpc` JSON-RPC client
+- Docs:
+  - Plans: `docs/plans/MASTER_PLAN.md`, `docs/plans/CLI_PLAN.md`
+  - Guides: build/smoke/bench/plugins/providers/electric
+  - Manual: RPC + data model
+
 - Discord notifications via Vibe CLI are required at start/progress/done for each autonomous task:
   - Start: `pnpm vibe:start`
   - Progress: `pnpm vibe:progress`
