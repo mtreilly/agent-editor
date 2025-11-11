@@ -30,7 +30,10 @@ struct OrResponse {
 
 // Minimal OpenRouter call using blocking reqwest with rustls.
 // Reads model from provider.config->model if present; otherwise defaults to "openrouter/auto".
-pub fn call_openrouter(db: &Db, prompt: &str, context: &str) -> Result<String, String> {
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct OrCallResult { pub text: String, pub model: String }
+
+pub fn call_openrouter(db: &Db, prompt: &str, context: &str) -> Result<OrCallResult, String> {
     let key = secrets::provider_key_get(db, "openrouter")?;
 
     // Discover model config if set
@@ -71,7 +74,7 @@ pub fn call_openrouter(db: &Db, prompt: &str, context: &str) -> Result<String, S
     if let Some(choices) = res.choices {
         for ch in choices {
             if let Some(msg) = ch.message {
-                if let Some(text) = msg.content { return Ok(text); }
+                if let Some(text) = msg.content { return Ok(OrCallResult { text, model }); }
             }
         }
     }

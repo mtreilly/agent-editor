@@ -13,5 +13,6 @@
   "button.runAIAnchor": "Run AI @Anchor",
   "error.providerNotAllowed": "Provider not allowed (enable and set key)",
   "error.aiRunFailed": "AI run failed",
+  "label.provider": "Provider",
   "placeholder.prompt": "Prompt"
 }

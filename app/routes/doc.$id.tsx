@@ -18,6 +18,7 @@ function DocPage() {
   const [saving, setSaving] = React.useState(false)
   const [prompt, setPrompt] = React.useState('Explain this section')
   const [aiOut, setAiOut] = React.useState('')
+  const [aiMeta, setAiMeta] = React.useState<{ provider?: string; model?: string }>({})
   const [lastAnchor, setLastAnchor] = React.useState<{ id: string; line: number } | null>(null)
   const [backlinks, setBacklinks] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
   const [neighbors, setNeighbors] = React.useState<Array<{ id: string; slug: string; title: string }>>([])
@@ -119,8 +120,9 @@ function DocPage() {
 
   async function runAI() {
     if (!doc) return
-    const res = await api.aiRun('local', doc.id, prompt)
+    const res: any = await api.aiRun('default', doc.id, prompt)
     setAiOut(res.text)
+    setAiMeta({ provider: res.provider || providerName || 'default', model: res.model || undefined })
   }
 
   async function insertAnchor() {
@@ -160,7 +162,12 @@ function DocPage() {
           }} disabled={!lastAnchor || !providerAllowed} title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}>{t('button.runAIAnchor', { ns: 'editor' })}</button>
         </div>
         {aiOut && (
-          <pre className="border rounded p-3 whitespace-pre-wrap text-sm">{aiOut}</pre>
+          <div className="border rounded p-3 space-y-2">
+            {(aiMeta.provider || aiMeta.model) && (
+              <div className="text-xs text-gray-600">{t('label.provider', { ns: 'editor' })}: {aiMeta.provider || providerName}{aiMeta.model ? ` (model: ${aiMeta.model})` : ''}</div>
+            )}
+            <pre className="whitespace-pre-wrap text-sm">{aiOut}</pre>
+          </div>
         )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">

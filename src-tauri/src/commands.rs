@@ -553,9 +553,10 @@ pub fn ai_run_core(db: &std::sync::Arc<Db>, req: AiRunRequest) -> Result<serde_j
             }
         }
     }
+    let mut response_model = String::new();
     let response_text = if provider_name == "openrouter" {
         match crate::ai::call_openrouter(db, &req.prompt, &redacted) {
-            Ok(txt) => txt,
+            Ok(res) => { response_model = res.model.clone(); res.text }
             Err(err) => format!("[openrouter:error:{}]\nPrompt: {}\n---\n{}", err, req.prompt, redacted),
         }
     } else {
@@ -566,12 +567,12 @@ pub fn ai_run_core(db: &std::sync::Arc<Db>, req: AiRunRequest) -> Result<serde_j
     let conn = db.0.lock();
     let trace_id = uuid::Uuid::new_v4().to_string();
     let request_json = serde_json::json!({"prompt": req.prompt, "context": redacted});
-    let response_json = serde_json::json!({"text": response_text});
+    let response_json = serde_json::json!({"text": response_text, "provider": provider_name, "model": response_model});
     conn.execute(
         "INSERT INTO ai_trace(id,repo_id,doc_id,anchor_id,provider,request,response,input_tokens,output_tokens,cost_usd) VALUES(?, (SELECT repo_id FROM doc WHERE id=?2 OR slug=?2), ?2, ?, ?, ?, ?, 0, 0, 0.0)",
-        rusqlite::params![trace_id, req.doc_id, req.anchor_id.unwrap_or_default(), req.provider, request_json.to_string(), response_json.to_string()],
+        rusqlite::params![trace_id, req.doc_id, req.anchor_id.unwrap_or_default(), provider_name, request_json.to_string(), response_json.to_string()],
     ).map_err(|e| e.to_string())?;
-    Ok(serde_json::json!({"trace_id": trace_id, "text": response_text}))
+    Ok(serde_json::json!({"trace_id": trace_id, "text": response_text, "provider": provider_name, "model": response_model}))
 }
 
 fn parse_anchor_line(anchor_id: &str) -> Option<usize> {
