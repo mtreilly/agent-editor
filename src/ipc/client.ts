@@ -23,6 +23,14 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
     }
     case 'search':
       return [] as any as T
+    case 'repos_list':
+      return [
+        { id: 'r1', name: 'demo', path: '/tmp/demo' },
+      ] as any as T
+    case 'repos_info':
+      return { id: args?.idOrName || 'r1', name: 'demo', path: '/tmp/demo', settings: { default_provider: 'local' } } as any as T
+    case 'repos_set_default_provider':
+      return { updated: true } as any as T
     case 'ai_providers_list':
       return [
         { name: 'local', kind: 'local', enabled: true },
