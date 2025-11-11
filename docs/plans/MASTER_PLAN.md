@@ -666,6 +666,13 @@ Exit Criteria
 - Added `docs/guides/ELECTRIC.md` describing table mappings, conflict policies, and a staged integration plan.
 - Replication scope excludes derived tables (link, FTS) and secrets. `ai_trace` replication is optional/off by default.
 
+### TODO Later (tracked in docs/OPEN_QUESTIONS.md)
+- CI bench assertions with thresholds; fail CI on regression.
+- UI a11y audit & polish per A11Y checklist.
+- Rustdoc module headers for core crates.
+- Plugin spawn lifecycle (timeouts/restart/logging).
+- CLI parity: repo update/export, plugin events tail.
+
 ### Core Plugin Demo
 - Added a simple echo-core Node plugin under `plugins/echo-core/echo.js` for local demos.
 - tmux demos:
