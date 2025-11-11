@@ -69,3 +69,6 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Export attachments
 - CLI tar exports now include attachment files, and the RPC surfaces attachment metadata/base64 so other formats can consume them.
 - Added Go tar test plus docs updates covering the archive layout.
+
+## 2025-11-11 — Export attachments flag
+- Added `--include-attachments` CLI flag so JSON/JSONL exports can opt-in to attachment payloads; tar still enables attachments automatically.

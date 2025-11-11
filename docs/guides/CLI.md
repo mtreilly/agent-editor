@@ -51,6 +51,7 @@ agent-editor export docs --repo r1 --out docs.json
 agent-editor export docs --include-deleted -o json
 agent-editor export docs --out docs.jsonl --format jsonl
 agent-editor export docs --out docs.tar --format tar --include-versions  # includes docs.json, versions.json, meta.json, docs/*.md
+agent-editor export docs --out docs.json --include-attachments           # opt-in attachments for json outputs
 agent-editor export db --out backup/agent-editor.db
 ```
 > Tar exports also bundle `attachments/<slug-id>/<filename>` entries for any doc assets, so imports can restore binaries losslessly.

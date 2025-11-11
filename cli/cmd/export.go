@@ -27,6 +27,7 @@ func exportCmd() *cobra.Command {
 		includeVersionsFlag, _ := cmd.Flags().GetBool("include-versions")
 		outFile, _ := cmd.Flags().GetString("out")
 		format, _ := cmd.Flags().GetString("format")
+		includeAttachmentsFlag, _ := cmd.Flags().GetBool("include-attachments")
 		format = strings.ToLower(format)
 		if format == "" {
 			format = "json"
@@ -41,6 +42,7 @@ func exportCmd() *cobra.Command {
 		}
 		if format == "tar" {
 			includeVersionsFlag = true
+			includeAttachmentsFlag = true
 		}
 
 		cfg := config.Load()
@@ -56,7 +58,7 @@ func exportCmd() *cobra.Command {
 		if includeVersionsFlag {
 			params["include_versions"] = true
 		}
-		if format == "tar" {
+		if includeAttachmentsFlag {
 			params["include_attachments"] = true
 		}
 		var res []map[string]interface{}
@@ -107,6 +109,7 @@ func exportCmd() *cobra.Command {
 	docs.Flags().String("out", "", "Write export to file (required for jsonl/tar)")
 	docs.Flags().String("format", "json", "Output format when using --out (json|jsonl|tar)")
 	docs.Flags().Bool("include-versions", false, "Include version metadata (auto-enabled for tar)")
+	docs.Flags().Bool("include-attachments", false, "Include doc attachments (always enabled for tar)")
 
 	db := &cobra.Command{Use: "db", RunE: func(cmd *cobra.Command, args []string) error {
 		outFile, _ := cmd.Flags().GetString("out")
