@@ -586,6 +586,29 @@ const plugin: PluginV1 = {
 export default plugin
 ```
 
+## Phase M3 — Plugins + AI Providers (Plan)
+
+Goals
+- Enable minimal plugin host: load one UI plugin and enumerate contributions; define core plugin spec and lifecycle (spawn/shutdown) with capability grants (scoped FS, network allowlist, DB RO/RW, AI provider allowlist).
+- Integrate real AI providers with privacy defaults and key storage (OS keychain).
+
+Scope
+- UI Host (TS): dynamic import of UI plugins; aggregate contributions (commands/views/renderers); message bus to IPC.
+- Core Host (Rust): spec struct for capabilities and exec; spawn (sidecar) process per plugin; JSON-RPC over stdin/stdout; permission checks in host.
+- Providers: wire Codex, Claude Code, OpenRouter, OpenCode drivers; redact secrets; provider selection policy per repo.
+
+Deliverables
+- src/plugins/host.ts (UI) with `loadUIPlugin()` and `listUIContributions()`
+- src-tauri/src/plugins/mod.rs (Core) with `Capabilities`, `CorePluginSpec`, and `spawn_core_plugin()` stub wired for future IPC
+- Providers registry is active (v0); add keychain integration (M3 task)
+- CLI: `plugin list|enable|disable|install|remove|call` (wire progressively to host APIs)
+
+Exit Criteria
+- Load at least one UI plugin (hello-world) and expose a command in app
+- Spawn one core plugin in dry-run mode with logged capability grants
+- Providers: at least one remote provider enabled behind opt-in with key loading (no network by default)
+
+
 ```ts
 // plugins/custom-scanner/index.ts
 import type { PluginV1 } from '../../src/plugins/types'
