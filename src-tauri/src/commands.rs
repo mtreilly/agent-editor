@@ -462,6 +462,16 @@ pub async fn docs_delete(doc_id: String, db: State<'_, std::sync::Arc<Db>>) -> R
 }
 
 #[derive(Serialize)]
+pub struct DocVersionExport {
+    pub id: String,
+    pub doc_id: String,
+    pub created_at: String,
+    pub hash: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+#[derive(Serialize)]
 pub struct DocExportRow {
     pub id: String,
     pub repo_id: String,
@@ -470,6 +480,8 @@ pub struct DocExportRow {
     pub body: String,
     pub updated_at: String,
     pub is_deleted: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub versions: Option<Vec<DocVersionExport>>,
 }
 
 fn export_docs_sql(include_deleted: bool, with_repo: bool) -> String {
@@ -501,6 +513,7 @@ fn fetch_doc_exports(conn: &Connection, repo_id: Option<&str>, include_deleted: 
                 body: r.get(4)?,
                 updated_at: r.get(5)?,
                 is_deleted: r.get::<_, i64>(6)? != 0,
+                versions: None,
             })
         })
     } else {
@@ -513,6 +526,7 @@ fn fetch_doc_exports(conn: &Connection, repo_id: Option<&str>, include_deleted: 
                 body: r.get(4)?,
                 updated_at: r.get(5)?,
                 is_deleted: r.get::<_, i64>(6)? != 0,
+                versions: None,
             })
         })
     };
@@ -521,11 +535,47 @@ fn fetch_doc_exports(conn: &Connection, repo_id: Option<&str>, include_deleted: 
     Ok(out)
 }
 
+fn fetch_doc_versions(conn: &Connection, doc_ids: &[String]) -> Result<HashMap<String, Vec<DocVersionExport>>, String> {
+    if doc_ids.is_empty() { return Ok(HashMap::new()); }
+    let mut map: HashMap<String, Vec<DocVersionExport>> = HashMap::new();
+    let mut stmt = conn.prepare(
+        "SELECT id, doc_id, created_at, hash, message FROM doc_version WHERE doc_id IN (SELECT value FROM json_each(?1)) ORDER BY created_at",
+    ).map_err(|e| e.to_string())?;
+    let ids_json = serde_json::to_string(doc_ids).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![ids_json], |r| {
+            Ok(DocVersionExport {
+                id: r.get(0)?,
+                doc_id: r.get(1)?,
+                created_at: r.get(2)?,
+                hash: r.get(3)?,
+                message: r.get::<_, Option<String>>(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    for row in rows {
+        let item = row.map_err(|e| e.to_string())?;
+        map.entry(item.doc_id.clone()).or_default().push(item);
+    }
+    Ok(map)
+}
+
 #[tauri::command]
-pub async fn export_docs(repo_id: Option<String>, include_deleted: Option<bool>, db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<DocExportRow>, String> {
+pub async fn export_docs(repo_id: Option<String>, include_deleted: Option<bool>, include_versions: Option<bool>, db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<DocExportRow>, String> {
     let include_deleted = include_deleted.unwrap_or(false);
+    let include_versions = include_versions.unwrap_or(false);
     let conn = db.0.lock();
-    fetch_doc_exports(&conn, repo_id.as_deref(), include_deleted)
+    let mut docs = fetch_doc_exports(&conn, repo_id.as_deref(), include_deleted)?;
+    if include_versions && !docs.is_empty() {
+        let ids: Vec<String> = docs.iter().map(|d| d.id.clone()).collect();
+        let version_map = fetch_doc_versions(&conn, &ids)?;
+        for doc in docs.iter_mut() {
+            if let Some(list) = version_map.get(&doc.id) {
+                doc.versions = Some(list.clone());
+            }
+        }
+    }
+    Ok(docs)
 }
 
 #[tauri::command]

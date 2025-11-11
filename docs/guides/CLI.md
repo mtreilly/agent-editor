@@ -50,7 +50,7 @@ agent-editor plugin events tail --all --from-beginning            # all lines, f
 agent-editor export docs --repo r1 --out docs.json
 agent-editor export docs --include-deleted -o json
 agent-editor export docs --out docs.jsonl --format jsonl
-agent-editor export docs --out docs.tar --format tar  # requires --out
+agent-editor export docs --out docs.tar --format tar --include-versions
 agent-editor export db --out backup/agent-editor.db
 ```
 
