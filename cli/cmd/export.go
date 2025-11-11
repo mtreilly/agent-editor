@@ -46,9 +46,16 @@ func exportCmd() *cobra.Command {
     docs.Flags().String("out", "", "Write JSON export to file")
 
     db := &cobra.Command{Use: "db", RunE: func(cmd *cobra.Command, args []string) error {
-        fmt.Println("export db (stub)")
-        return nil
+        outFile, _ := cmd.Flags().GetString("out")
+        if outFile == "" { return fmt.Errorf("--out is required") }
+        cfg := config.Load()
+        cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background()
+        var res map[string]interface{}
+        if err := cli.Call(ctx, "export_db", map[string]interface{}{"out_path": outFile}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
     }}
+    db.Flags().String("out", "", "Destination path for SQLite backup")
 
     export.AddCommand(docs, db)
     return export

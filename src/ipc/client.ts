@@ -78,6 +78,8 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
           is_deleted: false,
         },
       ] as any as T
+    case 'export_db':
+      return { path: args?.out_path || 'agent-editor.db', bytes: 0 } as any as T
     case 'plugins_core_list':
       return [] as any as T
     default:

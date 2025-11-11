@@ -52,7 +52,7 @@ Completed
  - CLI: `plugin events tail` to stream plugin-prefixed lines; docs updated.
 - Plugins: restart policy + prefixed stderr/stdout logging; watchdog timeout via `PLUGIN_CALL_TIMEOUT_MS`; unit test using slow-core.
 - Scripts: `tmux:plugin-log-smoke` to exercise logging and restart; packaging guide added with CI matrix.
-- CLI Export: `agent-editor export docs` calls new `export_docs` RPC with repo filter/include-deleted and optional file output; db export remains TODO.
+ - CLI Export: `agent-editor export docs` + `agent-editor export db` wired to RPCs (docs snapshot + SQLite backup with `--out`).
 
 Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset

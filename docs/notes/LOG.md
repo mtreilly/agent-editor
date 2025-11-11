@@ -17,3 +17,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Export docs
 - Implemented `export_docs` RPC + CLI `agent-editor export docs` with repo filter, include-deleted flag, optional file output.
 - Follow-up: implement `export db` (copy sqlite db) and support jsonl/tar formats per CLI plan.
+
+## 2025-11-11 — Export db
+- Added `export_db` RPC using SQLite backup to copy main DB to requested path; CLI `agent-editor export db --out <path>` now functional.
+- Next: extend export formats (jsonl, tar) and include attachments when ready.

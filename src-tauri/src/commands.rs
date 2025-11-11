@@ -2,7 +2,8 @@ use crate::{db::Db, scan};
 use crate::secrets;
 use crate::ai;
 use tauri::Emitter;
-use rusqlite::{params, OptionalExtension};
+use rusqlite::{params, OptionalExtension, Connection};
+use rusqlite::backup::Backup;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
@@ -458,6 +459,27 @@ pub async fn export_docs(repo_id: Option<String>, include_deleted: Option<bool>,
         for row in rows { out.push(row.map_err(|e| e.to_string())?) }
     }
     Ok(out)
+}
+
+#[tauri::command]
+pub async fn export_db(out_path: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let dest = PathBuf::from(out_path);
+    if let Some(parent) = dest.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let conn = db.0.lock();
+    let mut dest_conn = Connection::open(&dest).map_err(|e| e.to_string())?;
+    {
+        let mut backup = Backup::new(&*conn, "main", &mut dest_conn, "main").map_err(|e| e.to_string())?;
+        backup.step(-1).map_err(|e| e.to_string())?;
+        backup.finish().map_err(|e| e.to_string())?;
+    }
+    dest_conn.execute("PRAGMA wal_checkpoint(TRUNCATE)", []).ok();
+    let bytes = std::fs::metadata(&dest).map(|m| m.len()).unwrap_or(0);
+    Ok(serde_json::json!({
+        "path": dest.to_string_lossy(),
+        "bytes": bytes,
+    }))
 }
 
 #[derive(Serialize)]
