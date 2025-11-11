@@ -12,6 +12,7 @@ function ProvidersSettings() {
   const [providers, setProviders] = React.useState<api.Provider[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
+  const [keys, setKeys] = React.useState<Record<string, { has: boolean; value: string }>>({})
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -19,6 +20,14 @@ function ProvidersSettings() {
     try {
       const list = await api.aiProvidersList()
       setProviders(list)
+      const keyStates: Record<string, { has: boolean; value: string }> = {}
+      for (const p of list) {
+        if (p.kind === 'remote') {
+          const st = await api.aiProviderKeyGet(p.name)
+          keyStates[p.name] = { has: !!st?.has_key, value: '' }
+        }
+      }
+      setKeys(keyStates)
     } catch (e: any) {
       setError(e?.message || 'Failed to load providers')
     } finally {
@@ -36,6 +45,13 @@ function ProvidersSettings() {
     } catch (e) {
       console.error(e)
     }
+  }
+
+  async function saveKey(name: string) {
+    const v = keys[name]?.value || ''
+    if (!v) return
+    await api.aiProviderKeySet(name, v)
+    setKeys((prev) => ({ ...prev, [name]: { has: true, value: '' } }))
   }
 
   return (
@@ -66,6 +82,19 @@ function ProvidersSettings() {
                 >
                   {p.enabled ? t('button.disable') : t('button.enable')}
                 </button>
+                {p.kind === 'remote' && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="password"
+                      placeholder={t('apiKey')}
+                      className="border rounded px-2 py-1"
+                      value={keys[p.name]?.value || ''}
+                      onChange={(e) => setKeys((prev) => ({ ...prev, [p.name]: { ...(prev[p.name] || { has: false, value: '' }), value: e.target.value } }))}
+                    />
+                    <button className="px-2 py-1 border rounded" onClick={() => saveKey(p.name)}>{t('button.save')}</button>
+                    {keys[p.name]?.has && <span className="text-xs text-gray-600">{t('label.keySet')}</span>}
+                  </div>
+                )}
               </td>
             </tr>
           ))}

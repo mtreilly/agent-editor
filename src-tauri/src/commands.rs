@@ -377,6 +377,24 @@ pub async fn plugins_list(db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<serde
     Ok(out)
 }
 
+// -------- Provider Keys (stub: stored in provider.config) ---------
+#[tauri::command]
+pub async fn ai_provider_key_set(name: String, key: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let n = conn.execute(
+        "UPDATE provider SET config=json_set(COALESCE(config,json('{}')),'$.key',?2), updated_at=datetime('now') WHERE name=?1",
+        params![name, key],
+    ).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"updated": n>0}))
+}
+
+#[tauri::command]
+pub async fn ai_provider_key_get(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let key: Option<String> = conn.query_row("SELECT json_extract(config,'$.key') FROM provider WHERE name=?1", params![name], |r| r.get(0)).ok();
+    Ok(serde_json::json!({"has_key": key.is_some()}))
+}
+
 #[tauri::command]
 pub async fn plugins_enable(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let conn = db.0.lock();

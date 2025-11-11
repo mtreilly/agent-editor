@@ -21,6 +21,7 @@ function Root() {
           <Link to="/settings/providers">{t('nav.settings')}</Link>
           <Link to="/plugins">Plugins</Link>
         </nav>
+        <div className="ml-auto text-xs text-gray-500" aria-label="Command palette shortcut">Ctrl/Cmd+K</div>
       </header>
       <Outlet />
       <CommandPalette />

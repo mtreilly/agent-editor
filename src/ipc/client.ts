@@ -105,3 +105,6 @@ export const pluginsInfo = (name: string) => safeInvoke<any>('plugins_info', { n
 export const pluginsEnable = (name: string) => safeInvoke<{ updated: boolean }>('plugins_enable', { name })
 export const pluginsDisable = (name: string) => safeInvoke<{ updated: boolean }>('plugins_disable', { name })
 export const pluginsRemove = (name: string) => safeInvoke<{ removed: boolean }>('plugins_remove', { name })
+
+export const aiProviderKeySet = (name: string, key: string) => safeInvoke<{ updated: boolean }>('ai_provider_key_set', { name, key })
+export const aiProviderKeyGet = (name: string) => safeInvoke<{ has_key: boolean }>('ai_provider_key_get', { name })

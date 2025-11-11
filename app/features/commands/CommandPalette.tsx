@@ -1,9 +1,11 @@
 import * as React from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { getCommands, setCommands, builtinCommands } from './commandBus'
 import { listUIContributions } from '../../../src/plugins/host'
 
 export function CommandPalette() {
+  const { t } = useTranslation('palette')
   const [open, setOpen] = React.useState(false)
   const [q, setQ] = React.useState('')
   const [active, setActive] = React.useState(0)
@@ -52,16 +54,17 @@ export function CommandPalette() {
                 }
               }
             }}
-            placeholder="Type a command…"
+            placeholder={t('placeholder.type')}
             className="w-full px-3 py-2 border-b rounded-t outline-none"
             aria-label="Command palette input"
           />
-          <ul className="max-h-64 overflow-auto">
-            {items.length === 0 && <li className="px-3 py-2 text-sm text-gray-500">No matches</li>}
+          <ul className="max-h-64 overflow-auto" role="listbox" aria-label={t('title')}>
+            {items.length === 0 && <li className="px-3 py-2 text-sm text-gray-500">{t('noMatches')}</li>}
             {items.map((c, i) => (
               <li
                 key={c.id}
                 className={`px-3 py-2 cursor-pointer ${i === active ? 'bg-blue-50' : ''}`}
+                role="option"
                 onMouseEnter={() => setActive(i)}
                 onClick={() => {
                   Promise.resolve(c.run()).finally(() => setOpen(false))
@@ -76,4 +79,3 @@ export function CommandPalette() {
     </div>
   )
 }
-

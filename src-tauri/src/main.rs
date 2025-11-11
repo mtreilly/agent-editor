@@ -43,6 +43,8 @@ fn main() {
             commands::ai_providers_list,
             commands::ai_providers_enable,
             commands::ai_providers_disable,
+            commands::ai_provider_key_set,
+            commands::ai_provider_key_get,
             commands::plugins_list,
             commands::plugins_info,
             commands::plugins_enable,

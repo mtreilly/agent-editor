@@ -8,5 +8,8 @@
   "th.action": "Action",
   "button.enable": "Enable",
   "button.disable": "Disable",
-  "status.noProviders": "No providers"
+  "status.noProviders": "No providers",
+  "apiKey": "API Key",
+  "button.save": "Save",
+  "label.keySet": "Key set"
 }
