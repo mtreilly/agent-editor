@@ -12,5 +12,6 @@
   "apiKey": "API Key",
   "button.save": "Save",
   "button.test": "Test",
-  "label.keySet": "Key set"
+  "label.keySet": "Key set",
+  "globalDefaultProvider": "Global default provider"
 }

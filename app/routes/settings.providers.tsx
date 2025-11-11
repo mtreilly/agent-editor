@@ -13,6 +13,7 @@ function ProvidersSettings() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [keys, setKeys] = React.useState<Record<string, { has: boolean; value: string }>>({})
+  const [globalDefault, setGlobalDefault] = React.useState<string>('local')
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -20,6 +21,10 @@ function ProvidersSettings() {
     try {
       const list = await api.aiProvidersList()
       setProviders(list)
+      try {
+        const g = await api.appSettingsGet('default_provider')
+        if (g && g.value && typeof g.value === 'string') setGlobalDefault(g.value)
+      } catch {}
       const keyStates: Record<string, { has: boolean; value: string }> = {}
       for (const p of list) {
         if (p.kind === 'remote') {
@@ -66,6 +71,17 @@ function ProvidersSettings() {
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">{t('providers')}</h1>
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">{t('globalDefaultProvider') || 'Global default provider'}:</span>
+          <select className="border rounded px-2 py-1" value={globalDefault} onChange={(e) => setGlobalDefault(e.target.value)}>
+            {providers.map((p) => (
+              <option key={p.name} value={p.name}>{p.name}{p.enabled ? '' : ' (disabled)'}</option>
+            ))}
+          </select>
+          <button className="px-2 py-1 border rounded" onClick={async () => { await api.appSettingsSet('default_provider', globalDefault); await load() }}>{t('button.save')}</button>
+        </div>
+      </section>
       {loading && <div className="text-sm text-gray-600">{t('status.loading')}</div>}
       {error && <div role="alert" className="text-sm text-red-600">{t('error.loadProviders')}</div>}
       <table className="w-full text-sm border-collapse">

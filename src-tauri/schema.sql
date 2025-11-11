@@ -127,6 +127,13 @@ CREATE VIRTUAL TABLE IF NOT EXISTS doc_fts USING fts5(
   tokenize='unicode61 remove_diacritics 2'
 );
 
+-- App-wide settings key/value store (JSON values)
+CREATE TABLE IF NOT EXISTS app_setting (
+  key TEXT PRIMARY KEY,
+  value JSON,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- AI Providers registry (privacy: network off by default)
 CREATE TABLE IF NOT EXISTS provider (
   name TEXT PRIMARY KEY,

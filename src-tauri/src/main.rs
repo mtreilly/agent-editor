@@ -36,6 +36,8 @@ fn main() {
             commands::repos_info,
             commands::repos_remove,
             commands::repos_set_default_provider,
+            commands::app_settings_get,
+            commands::app_settings_set,
             commands::scan_repo,
             commands::docs_create,
             commands::docs_update,
