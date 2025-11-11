@@ -22,6 +22,7 @@
 - Rust unit tests live near code (e.g., in `commands.rs` modules).
 - E2E tests in `tests/e2e/*.spec.ts` run against web stubs.
 - Add focused unit tests for permission/redaction-like logic; keep E2E for user flows.
+- CLI (Go): `go test ./cli/...` works from repo root via `go.work` (uses Go 1.22); keep tar/attachments coverage in `cli/cmd/export_test.go` healthy.
 
 ## Debugging
 - `pnpm dev:check` for JSON-RPC health.
