@@ -2,5 +2,11 @@
   "title": "Plugins",
   "button.loadHello": "Load Hello World",
   "button.loaded": "Loaded",
-  "commands": "Commands"
+  "commands": "Commands",
+  "coreTitle": "Core Plugins",
+  "button.spawnEcho": "Spawn Echo",
+  "button.stopEcho": "Stop Echo",
+  "button.refresh": "Refresh",
+  "coreList": "Running",
+  "label.notInWeb": "Core plugin control not available in web tests"
 }
