@@ -16,6 +16,11 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
     case 'graph_neighbors':
     case 'graph_related':
       return [] as any as T
+    case 'graph_path': {
+      const start = args?.startId ?? ''
+      const end = args?.endId ?? ''
+      return [start, end] as any as T
+    }
     case 'search':
       return [] as any as T
     case 'anchors_upsert':
@@ -66,7 +71,15 @@ export type GraphDoc = { id: string; slug: string; title: string }
 export const graphBacklinks = (doc_id: string) => safeInvoke<GraphDoc[]>('graph_backlinks', { docId: doc_id })
 export const graphNeighbors = (doc_id: string, depth = 1) => safeInvoke<GraphDoc[]>('graph_neighbors', { docId: doc_id, depth })
 export const graphRelated = (doc_id: string) => safeInvoke<GraphDoc[]>('graph_related', { docId: doc_id })
-export const graphPath = (start_id: string, end_id: string) => safeInvoke<string[]>('graph_path', { startId: start_id, endId: end_id })
+
+const _graphPathCache = new Map<string, Promise<string[]>>()
+export const graphPath = (start_id: string, end_id: string) => {
+  const key = `${start_id}->${end_id}`
+  if (_graphPathCache.has(key)) return _graphPathCache.get(key) as Promise<string[]>
+  const p = safeInvoke<string[]>('graph_path', { startId: start_id, endId: end_id })
+  _graphPathCache.set(key, p)
+  return p
+}
 
 export const aiRun = (provider: string, doc_id: string, prompt: string, anchor_id?: string) =>
   safeInvoke<{ trace_id: string; text: string }>('ai_run', { provider, docId: doc_id, anchorId: anchor_id, prompt })

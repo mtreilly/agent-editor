@@ -282,6 +282,7 @@ pnpm preview                      # Preview production build
   - `pnpm tmux:dev` — sets up a 2x2 tmux layout with the above panes
   - `pnpm tmux:smoke` — sidecar + CLI smoke
   - `pnpm tmux:bench` — sidecar + FTS and scan benchmarks in dedicated panes
+  - `pnpm tmux:e2e` — web dev server + Playwright tests
 - If tmux is unavailable, install it or run an equivalent multi‑pane terminal.
 
 ## Multi-Agent Collaboration
