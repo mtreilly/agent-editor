@@ -230,6 +230,75 @@ mod tests_plugins {
     }
 }
 
+#[cfg(test)]
+mod tests_export {
+    use super::*;
+    use crate::db::open_db;
+    use std::sync::Arc;
+
+    fn test_db() -> Arc<Db> {
+        let p = std::env::temp_dir().join(format!("ae-export-test-{}.db", uuid::Uuid::new_v4()));
+        Arc::new(open_db(&p).expect("open db"))
+    }
+
+    fn ensure_repo(conn: &Connection, repo_id: &str) {
+        let path = format!("/{}", repo_id);
+        conn.execute(
+            "INSERT OR IGNORE INTO repo(id,name,path,settings) VALUES(?,?,?,json('{}'))",
+            params![repo_id, repo_id, path],
+        ).unwrap();
+        let folder_id = format!("folder-{}", repo_id);
+        conn.execute(
+            "INSERT OR IGNORE INTO folder(id,repo_id,parent_id,path,slug) VALUES(?,?,?,?,?)",
+            params![folder_id, repo_id, Option::<String>::None, path.clone(), "root"],
+        ).unwrap();
+    }
+
+    fn insert_doc(conn: &Connection, repo_id: &str, slug: &str, title: &str, body: &str, is_deleted: bool) {
+        ensure_repo(conn, repo_id);
+        let doc_id = uuid::Uuid::new_v4().to_string();
+        let folder_id = format!("folder-{}", repo_id);
+        conn.execute(
+            "INSERT INTO doc(id,repo_id,folder_id,slug,title,is_deleted,current_version_id,size_bytes,line_count) VALUES(?,?,?,?,?,?,?,?,?)",
+            params![
+                doc_id,
+                repo_id,
+                folder_id,
+                slug,
+                title,
+                if is_deleted { 1 } else { 0 },
+                Option::<String>::None,
+                body.len() as i64,
+                body.lines().count() as i64,
+            ],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT rowid, ?1, ?2, ?3, ?4 FROM doc WHERE id=?5",
+            params![title, body, slug, repo_id, doc_id],
+        ).unwrap();
+    }
+
+    #[test]
+    fn export_docs_filters_repo_and_deleted() {
+        let db = test_db();
+        {
+            let conn = db.0.lock();
+            insert_doc(&conn, "repo_a", "one", "Doc One", "Body", false);
+            insert_doc(&conn, "repo_a", "two", "Doc Two", "Body", true);
+            insert_doc(&conn, "repo_b", "three", "Doc Three", "Body", false);
+        }
+        let conn = db.0.lock();
+        let repo_only = fetch_doc_exports(&conn, Some("repo_a"), false).unwrap();
+        assert_eq!(repo_only.len(), 1);
+        assert_eq!(repo_only[0].slug, "one");
+        let with_deleted = fetch_doc_exports(&conn, Some("repo_a"), true).unwrap();
+        assert_eq!(with_deleted.len(), 2);
+        assert!(with_deleted.iter().any(|r| r.slug == "two" && r.is_deleted));
+        let all = fetch_doc_exports(&conn, None, false).unwrap();
+        assert_eq!(all.len(), 2);
+    }
+}
+
 #[tauri::command]
 pub async fn repos_remove(id_or_name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let conn = db.0.lock();
@@ -418,47 +487,45 @@ fn export_docs_sql(include_deleted: bool, with_repo: bool) -> String {
     sql
 }
 
+fn fetch_doc_exports(conn: &Connection, repo_id: Option<&str>, include_deleted: bool) -> Result<Vec<DocExportRow>, String> {
+    let mut out = Vec::new();
+    let sql = export_docs_sql(include_deleted, repo_id.is_some());
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let rows = if let Some(repo) = repo_id {
+        stmt.query_map(params![repo], |r| {
+            Ok(DocExportRow {
+                id: r.get(0)?,
+                repo_id: r.get(1)?,
+                slug: r.get(2)?,
+                title: r.get(3)?,
+                body: r.get(4)?,
+                updated_at: r.get(5)?,
+                is_deleted: r.get::<_, i64>(6)? != 0,
+            })
+        })
+    } else {
+        stmt.query_map([], |r| {
+            Ok(DocExportRow {
+                id: r.get(0)?,
+                repo_id: r.get(1)?,
+                slug: r.get(2)?,
+                title: r.get(3)?,
+                body: r.get(4)?,
+                updated_at: r.get(5)?,
+                is_deleted: r.get::<_, i64>(6)? != 0,
+            })
+        })
+    };
+    let rows = rows.map_err(|e| e.to_string())?;
+    for row in rows { out.push(row.map_err(|e| e.to_string())?) }
+    Ok(out)
+}
+
 #[tauri::command]
 pub async fn export_docs(repo_id: Option<String>, include_deleted: Option<bool>, db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<DocExportRow>, String> {
     let include_deleted = include_deleted.unwrap_or(false);
     let conn = db.0.lock();
-    let mut out = Vec::new();
-    if let Some(repo) = repo_id {
-        let sql = export_docs_sql(include_deleted, true);
-        let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
-        let rows = stmt
-            .query_map(params![repo], |r| {
-                Ok(DocExportRow {
-                    id: r.get(0)?,
-                    repo_id: r.get(1)?,
-                    slug: r.get(2)?,
-                    title: r.get(3)?,
-                    body: r.get(4)?,
-                    updated_at: r.get(5)?,
-                    is_deleted: r.get::<_, i64>(6)? != 0,
-                })
-            })
-            .map_err(|e| e.to_string())?;
-        for row in rows { out.push(row.map_err(|e| e.to_string())?) }
-    } else {
-        let sql = export_docs_sql(include_deleted, false);
-        let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
-        let rows = stmt
-            .query_map([], |r| {
-                Ok(DocExportRow {
-                    id: r.get(0)?,
-                    repo_id: r.get(1)?,
-                    slug: r.get(2)?,
-                    title: r.get(3)?,
-                    body: r.get(4)?,
-                    updated_at: r.get(5)?,
-                    is_deleted: r.get::<_, i64>(6)? != 0,
-                })
-            })
-            .map_err(|e| e.to_string())?;
-        for row in rows { out.push(row.map_err(|e| e.to_string())?) }
-    }
-    Ok(out)
+    fetch_doc_exports(&conn, repo_id.as_deref(), include_deleted)
 }
 
 #[tauri::command]
