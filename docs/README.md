@@ -4,10 +4,13 @@ Quick links to essential documentation:
 
 Guides
 - Code Map: `guides/CODEMAP.md`
+- Routing: `guides/ROUTING.md`
 - Development: `guides/DEVELOPMENT.md`
 - CI: `guides/CI.md`
 - Build & Package: `guides/BUILD.md`
 - Smoke: `guides/SMOKE.md`
+- Testing: `guides/TESTING.md`
+- Scanner internals: `guides/SCANNER.md`
 - Providers: `guides/PROVIDERS.md`
 - Plugins: `guides/PLUGINS.md`
 - ElectricSQL Prep: `guides/ELECTRIC.md`
