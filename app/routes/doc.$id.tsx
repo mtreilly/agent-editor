@@ -154,7 +154,7 @@ function DocPage() {
       <div className="space-y-2">
         <div className="flex gap-2">
           <input className="border rounded px-3 py-2 w-full" placeholder={t('placeholder.prompt', { ns: 'editor' })} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
-          <button className="px-3 py-2 border rounded disabled:opacity-50" onClick={runAI} disabled={!providerAllowed} title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}>{t('button.runAI', { ns: 'editor' })}</button>
+          <button data-testid="run-ai-btn" className="px-3 py-2 border rounded disabled:opacity-50" onClick={runAI} disabled={!providerAllowed} title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}>{t('button.runAI', { ns: 'editor' })}</button>
           <button className="px-3 py-2 border rounded disabled:opacity-50" onClick={async () => {
             if (!doc || !lastAnchor) return
             const res = await api.aiRun('local', doc.id, prompt, lastAnchor.id)
