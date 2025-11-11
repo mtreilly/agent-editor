@@ -24,6 +24,7 @@ pnpm dev:check   # attempts JSON-RPC call to /rpc repos_list on 127.0.0.1:35678
 ```bash
 pnpm build           # Vite client
 pnpm tauri build     # Packages desktop app (after Vite build)
+pnpm tmux:tauri-build # Run both builds in tmux (HEADLESS=1 for CI)
 ```
 
 Notes:
@@ -38,3 +39,7 @@ Dev/Test defaults:
 - Icon error: Convert to 32-bit RGBA (e.g., `magick input.png -define png:color-type=6 icon.png`).
 - Port conflicts: JSON-RPC runs on 127.0.0.1:35678. Adjust via command arg or config if needed.
 - Rust crates: run `cargo clean -p agent-editor` if schema or icons changed and rebuild.
+
+## Tmux packaging
+- Use `pnpm tmux:tauri-build` for interactive, reproducible packaging runs across panes.
+- In CI or headless agents, set `HEADLESS=1 pnpm tmux:tauri-build` to avoid attaching.

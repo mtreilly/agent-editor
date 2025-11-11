@@ -644,6 +644,10 @@ Exit Criteria
   - Settings: Providers page listing, enabling provider, and global default selection UX.
 - Palette ARIA polish: `aria-activedescendant` on listbox and stable option ids.
 
+### Progress Update — Packaging Prep
+- Added tmux packaging script `pnpm tmux:tauri-build` to build frontend and package desktop app in separate panes; supports `HEADLESS=1`.
+- BUILD guide updated to reference tmux packaging and headless usage.
+
 
 ```ts
 // plugins/custom-scanner/index.ts

@@ -125,6 +125,7 @@ logging:
   - Benchmarks: `pnpm tmux:bench`, Scan bench: `pnpm bench:scan`
   - Provider demos: `pnpm tmux:provider-demo`
   - Bootstrap (install + check + CLI build): `pnpm tmux:bootstrap`
+  - Packaging: `pnpm tmux:tauri-build`
 - Discord notifications via Vibe CLI are required at start/progress/done for each autonomous task:
   - Start: `pnpm vibe:start`
   - Progress: `pnpm vibe:progress`
