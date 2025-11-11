@@ -54,6 +54,15 @@ function ProvidersSettings() {
     setKeys((prev) => ({ ...prev, [name]: { has: true, value: '' } }))
   }
 
+  async function testProvider(name: string) {
+    try {
+      const res = await api.aiProviderTest(name, 'hello')
+      alert(`Provider ${name}: ${JSON.stringify(res)}`)
+    } catch (e: any) {
+      alert(`Provider ${name} test failed: ${e?.message || e}`)
+    }
+  }
+
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">{t('providers')}</h1>
@@ -92,6 +101,7 @@ function ProvidersSettings() {
                       onChange={(e) => setKeys((prev) => ({ ...prev, [p.name]: { ...(prev[p.name] || { has: false, value: '' }), value: e.target.value } }))}
                     />
                     <button className="px-2 py-1 border rounded" onClick={() => saveKey(p.name)}>{t('button.save')}</button>
+                    <button className="px-2 py-1 border rounded" onClick={() => testProvider(p.name)}>{t('button.test') || 'Test'}</button>
                     {keys[p.name]?.has && <span className="text-xs text-gray-600">{t('label.keySet')}</span>}
                   </div>
                 )}

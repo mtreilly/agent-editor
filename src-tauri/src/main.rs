@@ -6,6 +6,7 @@ mod api;
 mod scan;
 mod graph;
 mod secrets;
+mod ai;
 
 use std::path::PathBuf;
 use tauri::Manager;
@@ -46,6 +47,7 @@ fn main() {
             commands::ai_providers_disable,
             commands::ai_provider_key_set,
             commands::ai_provider_key_get,
+            commands::ai_provider_test,
             commands::plugins_list,
             commands::plugins_info,
             commands::plugins_enable,

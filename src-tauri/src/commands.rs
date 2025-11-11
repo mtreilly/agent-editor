@@ -1,5 +1,6 @@
 use crate::{db::Db, scan};
 use crate::secrets;
+use crate::ai;
 use tauri::Emitter;
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
@@ -394,6 +395,12 @@ pub async fn ai_provider_key_set(name: String, key: String, db: State<'_, std::s
 pub async fn ai_provider_key_get(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let has = secrets::provider_key_exists(&db, &name)?;
     Ok(serde_json::json!({"has_key": has}))
+}
+
+#[tauri::command]
+pub async fn ai_provider_test(name: String, prompt: Option<String>, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let res = ai::provider_test(&db, &name, &prompt.unwrap_or_else(|| "ping".into()))?;
+    Ok(res)
 }
 
 #[tauri::command]

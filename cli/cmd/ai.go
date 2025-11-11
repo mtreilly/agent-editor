@@ -51,7 +51,15 @@ func aiCmd() *cobra.Command {
         if err := cli.Call(ctx, "ai_providers_disable", map[string]interface{}{"name": args[0]}, &res); err != nil { return err }
         return output.Print(res, cfg.OutputFormat)
     }}}
-    providers.AddCommand(providersList, providersEnable, providersDisable)
+    providersTest := &cobra.Command{Use: "test <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load()
+        cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background()
+        var res map[string]interface{}
+        if err := cli.Call(ctx, "ai_provider_test", map[string]interface{}{"name": args[0], "prompt": "hello"}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+    providers.AddCommand(providersList, providersEnable, providersDisable, providersTest)
 
     traces := &cobra.Command{Use: "traces", Short: "AI traces"}
     tracesList := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return output.Print("not implemented", "text") }}
