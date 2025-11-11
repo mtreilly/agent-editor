@@ -34,11 +34,17 @@ See docs/guides/BUILD.md for prerequisites and troubleshooting.
 - Providers guide: `docs/guides/PROVIDERS.md`
 - Plugins guide: `docs/guides/PLUGINS.md`
 - ElectricSQL prep: `docs/guides/ELECTRIC.md`
+ - CLI quick ref: `docs/guides/CLI.md`
+ - Development: `docs/guides/DEVELOPMENT.md`, CI: `docs/guides/CI.md`
+ - Troubleshooting: `docs/guides/TROUBLESHOOTING.md`
 
 ## Tests
 - E2E (web stubs): `HEADLESS=1 pnpm tmux:e2e`
 - Smoke (sidecar + CLI): `pnpm tmux:smoke` or `pnpm smoke:cli`
 - CI smoke: `HEADLESS=1 pnpm tmux:ci-smoke`
+
+## Contributing
+See `CONTRIBUTING.md` for conventions and safety guidelines.
 
 ## Dev Workflow (tmux + vibe)
 - Use tmux scripts for dev/smoke/bench/tests: see `AGENTS.md` → Vibe + Tmux.

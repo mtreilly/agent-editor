@@ -1,5 +1,12 @@
 import { invoke } from '@tauri-apps/api/core'
 
+/**
+ * IPC client wrapper.
+ * - In desktop (Tauri) contexts, delegates to `invoke`.
+ * - In web-only tests/dev, returns stubbed responses so UI can render and E2E can run without a desktop runtime.
+ * See docs/manual/IPC_STUBS.md for details on stub behaviors.
+ */
+
 function hasTauri() {
   return typeof window !== 'undefined' && typeof (window as any).__TAURI__ !== 'undefined'
 }
@@ -117,8 +124,9 @@ export const graphPath = (start_id: string, end_id: string) => {
   return p
 }
 
+export type AiRunResponse = { trace_id: string; text: string; provider?: string; model?: string }
 export const aiRun = (provider: string, doc_id: string, prompt: string, anchor_id?: string) =>
-  safeInvoke<{ trace_id: string; text: string }>('ai_run', { provider, docId: doc_id, anchorId: anchor_id, prompt })
+  safeInvoke<AiRunResponse>('ai_run', { provider, docId: doc_id, anchorId: anchor_id, prompt })
 
 export const anchorsUpsert = (doc_id: string, anchor_id: string, line: number) =>
   safeInvoke<{ ok: boolean }>('anchors_upsert', { docId: doc_id, anchorId: anchor_id, line })
