@@ -8,6 +8,7 @@ Source of truth: `src-tauri/schema.sql`. Highlights below.
 - doc(id, repo_id, folder_id, slug, title, lang, is_deleted, current_version_id, size_bytes, line_count, backlink_count, timestamps)
 - doc_blob(id, content, encoding, mime, size_bytes)
 - doc_version(id, doc_id, blob_id, author, message, created_at, hash)
+- doc_asset(id, doc_id, filename, mime, size_bytes, blob_id, created_at) — attachments/binary assets linked to docs; filename unique per doc.
 - link(id, repo_id, from_doc_id, to_doc_id?, to_slug, type, line_start, line_end, created_at)
 - provenance(id, entity_type, entity_id, source, meta, created_at) — anchors stored here
 - scan_job(id, repo_id, status, stats, started_at, finished_at, error)
