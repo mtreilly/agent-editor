@@ -72,3 +72,6 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 
 ## 2025-11-11 — Export attachments flag
 - Added `--include-attachments` CLI flag so JSON/JSONL exports can opt-in to attachment payloads; tar still enables attachments automatically.
+
+## 2025-11-11 — CLI tests
+- `go test ./...` currently fails because the repo doesn’t have a `go.mod`; add a module before expanding Go-based test coverage.
