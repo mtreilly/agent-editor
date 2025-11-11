@@ -284,6 +284,7 @@ pnpm preview                      # Preview production build
   - `pnpm tmux:bench` — sidecar + FTS and scan benchmarks in dedicated panes
   - `pnpm tmux:e2e` — web dev server + Playwright tests
   - `pnpm tmux:bootstrap` — installs deps (pnpm), runs cargo check and CLI build in panes
+  - `pnpm vibe:start` / `pnpm vibe:progress` / `pnpm vibe:done` — send Discord notifications via vibe CLI in a tmux session (requires `vibe` installed; otherwise logs locally)
 - If tmux is unavailable, install it or run an equivalent multi‑pane terminal.
 
 ## Multi-Agent Collaboration

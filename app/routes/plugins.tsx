@@ -3,12 +3,14 @@ import { createFileRoute } from '@tanstack/react-router'
 import { loadUIPlugin, listUIContributions } from '../../src/plugins/host'
 import type { PluginContext } from '../../src/plugins/types'
 import { ipcCall } from '../../src/ipc/client'
+import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/plugins')({
   component: PluginsPage,
 })
 
 function PluginsPage() {
+  const { t } = useTranslation('plugins')
   const [loaded, setLoaded] = React.useState(false)
   const [commands, setCommands] = React.useState<Array<{ id: string; title: string; run: (args: any) => Promise<void> | void }>>([])
 
@@ -33,15 +35,15 @@ function PluginsPage() {
 
   return (
     <main className="p-6 space-y-4">
-      <h1 className="text-xl font-semibold">Plugins</h1>
+      <h1 className="text-xl font-semibold">{t('title')}</h1>
       <div className="flex gap-2">
         <button className="px-3 py-2 border rounded" onClick={loadHello} disabled={loaded}>
-          {loaded ? 'Loaded' : 'Load Hello World'}
+          {loaded ? t('button.loaded') : t('button.loadHello')}
         </button>
       </div>
       {!!commands.length && (
         <section className="space-y-2">
-          <h2 className="font-semibold">Commands</h2>
+          <h2 className="font-semibold">{t('commands')}</h2>
           <ul className="space-y-2">
             {commands.map((c) => (
               <li key={c.id}>
@@ -60,4 +62,3 @@ function PluginsPage() {
     </main>
   )
 }
-

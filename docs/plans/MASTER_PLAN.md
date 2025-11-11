@@ -903,6 +903,8 @@ func (m model) View() string { return "Search: " + m.query }
 - UI smoke: Playwright at 320/768/1024/1440 for editor input, search, navigation, plugins view.
 - Plugin conformance: run plugin test harness to validate permissions and API shape.
  - E2E additions: graph path tool smoke; doc page panels with web-only IPC stubs. CLI smoke script exercises repo add/scan/search/graph.
+ - i18n: extraction check — no hardcoded user-facing strings in components; validate locale keys exist; fallback coverage.
+ - Plugins: UI host smoke — load hello-world plugin and execute a command; Core host dry-run spawn (logs capability grants).
 
 ## Milestones
 1) M1 Core DB + Scanner + FTS (Exit: scan repo, search works; 100k docs index <60m, search <80ms P95)

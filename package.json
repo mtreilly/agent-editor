@@ -21,7 +21,10 @@
     "tmux:bench": "bash scripts/tmux-bench.sh",
     "tmux:bootstrap": "bash scripts/tmux-bootstrap.sh",
     "bench:fts": "bash scripts/bench-fts.sh the 50",
-    "bench:scan": "bash scripts/bench-scan.sh"
+    "bench:scan": "bash scripts/bench-scan.sh",
+    "vibe:start": "bash scripts/tmux-vibe-notify.sh 'M2 Final Polish: starting'",
+    "vibe:progress": "bash scripts/tmux-vibe-notify.sh 'M2 Final Polish: in progress'",
+    "vibe:done": "bash scripts/tmux-vibe-notify.sh 'M2 Final Polish: finished'"
   },
   "dependencies": {
     "i18next": "^23.10.1",

@@ -1,0 +1,6 @@
+{
+  "title": "Plugins",
+  "button.loadHello": "Load Hello World",
+  "button.loaded": "Loaded",
+  "commands": "Commands"
+}
