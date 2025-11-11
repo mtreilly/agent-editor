@@ -49,6 +49,7 @@ agent-editor plugin events tail --all --from-beginning            # all lines, f
 # Export
 agent-editor export docs --repo r1 --out docs.json
 agent-editor export docs --include-deleted -o json
+agent-editor export docs --out docs.jsonl --format jsonl
 agent-editor export db --out backup/agent-editor.db
 ```
 

@@ -21,3 +21,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Export db
 - Added `export_db` RPC using SQLite backup to copy main DB to requested path; CLI `agent-editor export db --out <path>` now functional.
 - Next: extend export formats (jsonl, tar) and include attachments when ready.
+
+## 2025-11-11 — Export formats
+- `agent-editor export docs --format jsonl --out docs.jsonl` writes newline-delimited JSON for streaming pipelines; default remains pretty JSON.
+- Follow-up: tarball packaging (docs + metadata) when attachments/versions export lands.
