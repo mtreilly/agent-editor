@@ -82,11 +82,29 @@ function PluginsPage() {
       <section className="space-y-2">
         <h2 className="font-semibold">{t('coreTitle', { defaultValue: 'Core Plugins' })}</h2>
         {!hasTauri && (
-          <div className="text-xs text-amber-700">{t('label.notInWeb', { defaultValue: 'Core plugin control not available in web tests' })}</div>
+          <div id="plugins-not-in-web" className="text-xs text-amber-700">
+            {t('label.notInWeb', { defaultValue: 'Core plugin control not available in web tests' })}
+          </div>
         )}
         <div className="flex gap-2">
-          <button className="px-2 py-1 border rounded disabled:opacity-50" onClick={spawnEcho} disabled={!hasTauri}>{t('button.spawnEcho', { defaultValue: 'Spawn Echo' })}</button>
-          <button className="px-2 py-1 border rounded disabled:opacity-50" onClick={stopEcho} disabled={!hasTauri}>{t('button.stopEcho', { defaultValue: 'Stop Echo' })}</button>
+          <button
+            className="px-2 py-1 border rounded disabled:opacity-50"
+            onClick={spawnEcho}
+            disabled={!hasTauri}
+            aria-disabled={!hasTauri}
+            aria-describedby={!hasTauri ? 'plugins-not-in-web' : undefined}
+          >
+            {t('button.spawnEcho', { defaultValue: 'Spawn Echo' })}
+          </button>
+          <button
+            className="px-2 py-1 border rounded disabled:opacity-50"
+            onClick={stopEcho}
+            disabled={!hasTauri}
+            aria-disabled={!hasTauri}
+            aria-describedby={!hasTauri ? 'plugins-not-in-web' : undefined}
+          >
+            {t('button.stopEcho', { defaultValue: 'Stop Echo' })}
+          </button>
           <button className="px-2 py-1 border rounded" onClick={refreshCore}>{t('button.refresh', { defaultValue: 'Refresh' })}</button>
         </div>
         <div>

@@ -138,11 +138,15 @@ function ProvidersSettings() {
                       placeholder={t('apiKey')}
                       className="border rounded px-2 py-1"
                       value={keys[p.name]?.value || ''}
+                      aria-describedby={`hint-${p.name}-apikey`}
                       onChange={(e) => setKeys((prev) => ({ ...prev, [p.name]: { ...(prev[p.name] || { has: false, value: '' }), value: e.target.value } }))}
                     />
                     <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!keys[p.name]?.value} title={!keys[p.name]?.value ? (t('hint.setKey') as string) : undefined} onClick={() => saveKey(p.name)}>{t('button.save')}</button>
                     <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!allowed} title={!allowed ? (t('hint.enableProvider') as string) : undefined} onClick={() => testProvider(p.name)}>{t('button.test') || 'Test'}</button>
                     {keys[p.name]?.has && <span className="text-xs text-gray-600">{t('label.keySet')}</span>}
+                    <span id={`hint-${p.name}-apikey`} className="text-xs text-gray-600">
+                      {t('hint.setKeyHelp', { defaultValue: 'Enter API key; stored via keychain when available.' })}
+                    </span>
                   </div>
                 )}
                 {p.name === 'openrouter' && (
@@ -152,9 +156,13 @@ function ProvidersSettings() {
                       placeholder={t('modelPlaceholder', { defaultValue: 'openrouter/auto' })}
                       className="border rounded px-2 py-1"
                       value={models[p.name] ?? ''}
+                      aria-describedby={`hint-${p.name}-model`}
                       onChange={(e) => setModels((prev) => ({ ...prev, [p.name]: e.target.value }))}
                     />
                     <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!allowed} title={!allowed ? (t('hint.enableProvider') as string) : undefined} onClick={() => saveModel(p.name)}>{t('button.saveModel', { defaultValue: 'Save Model' })}</button>
+                    <span id={`hint-${p.name}-model`} className="text-xs text-gray-600">
+                      {t('hint.modelHelp', { defaultValue: 'Set default model for this provider (e.g., openrouter/auto).' })}
+                    </span>
                   </div>
                 )}
               </td>

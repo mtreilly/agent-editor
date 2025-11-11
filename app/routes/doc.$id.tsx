@@ -167,18 +167,37 @@ function DocPage() {
       <div className="space-y-2">
         <div className="flex gap-2">
           <input className="border rounded px-3 py-2 w-full" placeholder={t('placeholder.prompt', { ns: 'editor' })} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
-          <button data-testid="run-ai-btn" className="px-3 py-2 border rounded disabled:opacity-50" onClick={runAI} disabled={!providerAllowed} title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}>{t('button.runAI', { ns: 'editor' })}</button>
-          <button className="px-3 py-2 border rounded disabled:opacity-50" onClick={async () => {
-            if (!doc || !lastAnchor) return
-            const res = await api.aiRun('local', doc.id, prompt, lastAnchor.id)
-            setAiOut(res.text)
-          }} disabled={!lastAnchor || !providerAllowed} title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}>{t('button.runAIAnchor', { ns: 'editor' })}</button>
+          <button
+            data-testid="run-ai-btn"
+            className="px-3 py-2 border rounded disabled:opacity-50"
+            onClick={runAI}
+            disabled={!providerAllowed}
+            aria-describedby={!providerAllowed ? 'provider-disabled-hint' : undefined}
+            title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}
+          >
+            {t('button.runAI', { ns: 'editor' })}
+          </button>
+          <button
+            className="px-3 py-2 border rounded disabled:opacity-50"
+            onClick={async () => {
+              if (!doc || !lastAnchor) return
+              const res = await api.aiRun('local', doc.id, prompt, lastAnchor.id)
+              setAiOut(res.text)
+            }}
+            disabled={!lastAnchor || !providerAllowed}
+            aria-describedby={!providerAllowed ? 'provider-disabled-hint' : undefined}
+            title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}
+          >
+            {t('button.runAIAnchor', { ns: 'editor' })}
+          </button>
         </div>
         {!providerAllowed && (
-          <div className="text-xs text-amber-700" role="note">{t('error.providerNotAllowed', { ns: 'editor' })}</div>
+          <div id="provider-disabled-hint" className="text-xs text-amber-700" role="note">
+            {t('error.providerNotAllowed', { ns: 'editor' })}
+          </div>
         )}
         {aiOut && (
-          <div className="border rounded p-3 space-y-2">
+          <div className="border rounded p-3 space-y-2" role="status" aria-live="polite" aria-atomic={false}>
             {(aiMeta.provider || aiMeta.model) && (
               <div className="text-xs text-gray-600">{t('label.provider', { ns: 'editor' })}: {aiMeta.provider || providerName}{aiMeta.model ? ` (model: ${aiMeta.model})` : ''}</div>
             )}

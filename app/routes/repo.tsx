@@ -88,7 +88,11 @@ function RepoPage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t('repositories')}</h2>
-        {lastEvt ? <div className="text-xs text-gray-600">{t('scanEvent', { event: lastEvt })}</div> : null}
+        {lastEvt ? (
+          <div className="text-xs text-gray-600" role="status" aria-live="polite">
+            {t('scanEvent', { event: lastEvt })}
+          </div>
+        ) : null}
         <ul className="space-y-2">
           {repos.map((r) => (
             <li key={r.id} className="border rounded p-3 flex items-center justify-between">

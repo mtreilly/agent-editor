@@ -13,3 +13,8 @@ Legend: [OK] complete, [TODO] improvements pending
 - Plugins (/plugins): [OK] headings and buttons; [TODO] Core controls disabled states get aria-disabled annotations
 
 Update this file as routes are improved.
+
+- [x] Repo scan progress uses aria-live polite
+- [x] Doc AI output region uses role=status + aria-live polite
+- [x] Provider settings model input has aria-describedby hint
+- [x] Plugins panel buttons expose aria-disabled semantics with describedby when disabled
