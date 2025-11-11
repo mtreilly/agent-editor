@@ -638,6 +638,12 @@ Exit Criteria
 - Endpoint allowlisted to `https://api.openrouter.ai/v1/chat/completions` for this adapter.
 - `ai_run` now invokes the provider when `provider=openrouter` is enabled and key exists; on error, falls back to a clearly tagged echo stub.
 
+### Progress Update — M3 E2E/QA
+- Added Playwright tests (web stubs) for:
+  - Command palette open + keyboard navigation with ARIA listbox semantics.
+  - Settings: Providers page listing, enabling provider, and global default selection UX.
+- Palette ARIA polish: `aria-activedescendant` on listbox and stable option ids.
+
 
 ```ts
 // plugins/custom-scanner/index.ts
