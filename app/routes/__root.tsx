@@ -15,6 +15,7 @@ function Root() {
           <Link to="/search">Search</Link>
           <Link to="/repo">Repos</Link>
           <Link to="/graph/">Graph</Link>
+          <Link to="/settings/providers">Settings</Link>
         </nav>
       </header>
       <Outlet />

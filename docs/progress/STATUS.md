@@ -27,7 +27,8 @@ Completed
 - AI: provider registry (SQLite) with privacy defaults; CLI and IPC for list/enable/disable wired
  - Packaging readiness: RGBA icon added; desktop uses AE_DB or .dev DB for builds/tests
 - Benchmarks: `pnpm tmux:bench` orchestrates sidecar + FTS/scan benches; CLI `fts bench` reports avg/p50/p95/p99
- - E2E: Graph path compute covered by Playwright with web IPC stubs; `pnpm tmux:e2e` runs dev + tests
+- E2E: Graph path compute covered by Playwright with web IPC stubs; `pnpm tmux:e2e` runs dev + tests
+ - Settings: Providers management UI added (list/enable/disable) at /settings/providers, wired to IPC
 
 Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset
