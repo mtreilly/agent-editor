@@ -16,7 +16,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 
 ## 2025-11-11 — Export docs
 - Implemented `export_docs` RPC + CLI `agent-editor export docs` with repo filter, include-deleted flag, optional file output.
-- Follow-up: implement `export db` (copy sqlite db) and support jsonl/tar formats per CLI plan.
+- Follow-up from earlier milestone (done now): tar/jsonl formats + attachments in exports.
 
 ## 2025-11-11 — Export db
 - Added `export_db` RPC using SQLite backup to copy main DB to requested path; CLI `agent-editor export db --out <path>` now functional.
@@ -24,7 +24,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 
 ## 2025-11-11 — Export formats
 - `agent-editor export docs --format jsonl --out docs.jsonl` writes newline-delimited JSON for streaming pipelines.
-- `agent-editor export docs --format tar --out docs.tar --include-versions` builds a tarball containing `docs.json`, `versions.json`, and `meta.json`; attachments TODO.
+- `agent-editor export docs --format tar --out docs.tar --include-versions` builds a tarball containing `docs.json`, `versions.json`, `meta.json`, doc Markdown snapshots, and attachment files.
 
 ## 2025-11-11 — Export tar tests
 - Added Go unit test for writeDocsTar to ensure docs.json/meta.json integrity.
