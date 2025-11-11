@@ -28,9 +28,9 @@
     "tmux:tauri-build": "bash scripts/tmux-tauri-build.sh",
     "bench:fts": "bash scripts/bench-fts.sh the 50",
     "bench:scan": "bash scripts/bench-scan.sh",
-    "vibe:start": "bash scripts/tmux-vibe-notify.sh 'M2 Final Polish: starting'",
-    "vibe:progress": "bash scripts/tmux-vibe-notify.sh 'M2 Final Polish: in progress'",
-    "vibe:done": "bash scripts/tmux-vibe-notify.sh 'M2 Final Polish: finished'"
+    "vibe:start": "bash scripts/tmux-vibe-notify.sh 'M3 Plugins + Providers: starting'",
+    "vibe:progress": "bash scripts/tmux-vibe-notify.sh 'M3 Plugins + Providers: in progress'",
+    "vibe:done": "bash scripts/tmux-vibe-notify.sh 'M3 Plugins + Providers: finished'"
   },
   "dependencies": {
     "i18next": "^23.10.1",

@@ -135,6 +135,22 @@ mod tests_perm {
         let err = plugins_call_core_check(&db, "p4", bad_line).unwrap_err();
         assert_eq!(err, "forbidden_fs_root");
     }
+
+    #[test]
+    fn db_permissions_query_and_write() {
+        let db = test_db();
+        // Only query allowed
+        insert_plugin(&db, "p5", 1, r#"{"core":{"call":1},"db":{"query":1}}"#);
+        let q_line = r#"{"jsonrpc":"2.0","id":"1","method":"db.query","params":{"sql":"SELECT 1"}}"#;
+        assert!(plugins_call_core_check(&db, "p5", q_line).is_ok());
+        let w_line = r#"{"jsonrpc":"2.0","id":"1","method":"db.writeInsert","params":{"sql":"INSERT"}}"#;
+        let err = plugins_call_core_check(&db, "p5", w_line).unwrap_err();
+        assert_eq!(err, "forbidden");
+
+        // Write allowed
+        insert_plugin(&db, "p6", 1, r#"{"core":{"call":1},"db":{"write":1}}"#);
+        assert!(plugins_call_core_check(&db, "p6", w_line).is_ok());
+    }
 }
 
 #[tauri::command]

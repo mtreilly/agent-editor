@@ -39,6 +39,10 @@ Completed
 - Core plugins: spawn/stop RPC endpoints scaffolded (not implemented) and CLI wiring added
 - Capability gate: call-core requires plugin.enabled=1 and permissions.core.call=true
  - Net domains: host enforces `permissions.net.domains` for `net.request*`; added tmux net demo
+ - Permissions tests: unit tests added for core.call, net domains allowlist, fs roots allowlist (commands.rs tests)
+ - Providers (OpenRouter): adapter implemented with reqwest; model configurable; provider resolve IPC and UI gating; ai_run returns provider/model and UI shows header
+ - Repo page: shows effective provider (repo default or global)
+ - Packaging: tmux packaging script added (`pnpm tmux:tauri-build`); BUILD guide updated
 
 Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset

@@ -648,6 +648,20 @@ Exit Criteria
 - Added tmux packaging script `pnpm tmux:tauri-build` to build frontend and package desktop app in separate panes; supports `HEADLESS=1`.
 - BUILD guide updated to reference tmux packaging and headless usage.
 
+### M3 Roll-up (current)
+- Providers:
+  - Effective provider resolution (repo default → app default → local) with IPC `ai_provider_resolve` and UI gating on doc page.
+  - OpenRouter adapter wired with reqwest (rustls). Keys via keyring facade; model configurable via provider.config.model.
+  - ai_run returns and persists provider+model for transparency; doc UI displays header.
+- UX & A11y:
+  - Command palette ARIA (`aria-activedescendant`, stable option ids) and keyboard (Home/End) enhancements.
+  - Repo page shows effective provider (repo default or global).
+- Tests:
+  - E2E web stubs for palette, providers page, repo default, AI run header.
+  - Rust unit tests: plugin capability gates helper and tests for core.call, net domains allowlist, fs roots allowlist.
+- Packaging:
+  - Tmux packaging flow added; docs updated.
+
 
 ```ts
 // plugins/custom-scanner/index.ts
