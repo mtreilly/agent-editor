@@ -62,6 +62,17 @@ flowchart TD
   PH <--> CorePlugin
 ```
 
+Host validation
+- Validates JSON-RPC 2.0 envelope (jsonrpc, id, method), and enforces method-level permissions based on prefix:
+  - `fs.write*` → `permissions.fs.write == true`
+  - `fs.*` → `permissions.fs.read == true`
+  - `net.request*` → `permissions.net.request == true`
+  - `db.write*` → `permissions.db.write == true`
+  - `db.*` → `permissions.db.query == true`
+  - `ai.invoke*` → `permissions.ai.invoke == true`
+  - `scanner.register*` → `permissions.scanner.register == true`
+  - Always requires `permissions.core.call == true` and plugin `enabled == 1`
+
 ## Component Responsibilities & Boundaries
 - Tauri Core (Rust)
   - Inputs: IPC commands; file system events.
