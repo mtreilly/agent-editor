@@ -108,3 +108,7 @@ export const pluginsRemove = (name: string) => safeInvoke<{ removed: boolean }>(
 
 export const aiProviderKeySet = (name: string, key: string) => safeInvoke<{ updated: boolean }>('ai_provider_key_set', { name, key })
 export const aiProviderKeyGet = (name: string) => safeInvoke<{ has_key: boolean }>('ai_provider_key_get', { name })
+
+export const pluginsSpawnCore = (name: string, exec: string, args?: string[]) =>
+  safeInvoke<{ ok?: boolean }>('plugins_spawn_core', { name, exec, args })
+export const pluginsShutdownCore = (name: string) => safeInvoke<{ ok?: boolean }>('plugins_shutdown_core', { name })

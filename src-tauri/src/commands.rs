@@ -436,6 +436,19 @@ pub async fn plugins_remove(name: String, db: State<'_, std::sync::Arc<Db>>) -> 
     Ok(serde_json::json!({"removed": n>0}))
 }
 
+// -------- Core Plugin spawn/stop (stubs) ---------
+#[tauri::command]
+pub async fn plugins_spawn_core(name: String, exec: String, args: Option<Vec<String>>) -> Result<serde_json::Value, String> {
+    let _ = (name, exec, args);
+    Err("not_implemented".into())
+}
+
+#[tauri::command]
+pub async fn plugins_shutdown_core(name: String) -> Result<serde_json::Value, String> {
+    let _ = name;
+    Err("not_implemented".into())
+}
+
 // -------- AI Providers ---------
 #[derive(Serialize)]
 pub struct ProviderRow { pub name: String, pub kind: String, pub enabled: bool }

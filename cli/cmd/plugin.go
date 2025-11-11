@@ -44,10 +44,29 @@ func pluginCmd() *cobra.Command {
     }}
     call := &cobra.Command{Use: "call <name> <method>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error { return output.Print("not implemented", "text") }}
 
+    startCore := &cobra.Command{Use: "start-core <name> --exec <path> [-- <args>...]", Args: cobra.MinimumNArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+        execPath, _ := cmd.Flags().GetString("exec")
+        if execPath == "" { return fmt.Errorf("--exec is required") }
+        cfg := config.Load(); cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background(); var res map[string]interface{}
+        params := map[string]interface{}{"name": args[0], "exec": execPath}
+        if len(args) > 1 { params["args"] = args[1:] }
+        if err := cli.Call(ctx, "plugins_spawn_core", params, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+    startCore.Flags().String("exec", "", "Executable path for core plugin")
+
+    stopCore := &cobra.Command{Use: "stop-core <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load(); cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background(); var res map[string]interface{}
+        if err := cli.Call(ctx, "plugins_shutdown_core", map[string]interface{}{"name": args[0]}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+
     events := &cobra.Command{Use: "events", Short: "Plugin events"}
     eventsTail := &cobra.Command{Use: "tail", RunE: func(cmd *cobra.Command, args []string) error { fmt.Println("plugin events tail (stub)"); return nil }}
     events.AddCommand(eventsTail)
 
-    plugin.AddCommand(install, list, info, remove, enable, disable, call, events)
+    plugin.AddCommand(install, list, info, remove, enable, disable, call, startCore, stopCore, events)
     return plugin
 }

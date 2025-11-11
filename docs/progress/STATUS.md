@@ -32,8 +32,9 @@ Completed
  - i18n: Added i18next; extracted visible strings across nav, index, search, graph, editor (anchors/doc page), repo, and settings
  - A11y: Search listbox uses proper roles and aria-activedescendant; buttons/labels include ARIA where appropriate
 - Plugins (UI/Core): minimal UI host to load Hello World plugin at /plugins and run a command; Core host scaffold in Rust
- - Command Palette: Ctrl/Cmd+K palette uses plugin contributions; i18n and ARIA polish
- - Providers: API key set/get stub via provider.config (to be replaced with OS keychain in M3)
+- Command Palette: Ctrl/Cmd+K palette uses plugin contributions; i18n and ARIA polish
+- Providers: API key set/get stub via provider.config (to be replaced with OS keychain in M3)
+ - Core plugins: spawn/stop RPC endpoints scaffolded (not implemented) and CLI wiring added
 
 Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset
