@@ -10,7 +10,7 @@ export const Route = createFileRoute('/doc/$id')({
 })
 
 function DocPage() {
-  const { t } = useTranslation('editor')
+  const { t } = useTranslation(['editor','graph','common'])
   const { id } = Route.useParams()
   const [doc, setDoc] = React.useState<any>(null)
   const [body, setBody] = React.useState('')
@@ -104,27 +104,27 @@ function DocPage() {
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">{doc.title || doc.slug}</h1>
       <div className="border rounded p-2" id="editor-container">
-        <React.Suspense fallback={<div className="text-sm text-gray-600">{t('status.loading')}</div>}>
+        <React.Suspense fallback={<div className="text-sm text-gray-600">{t('status.loading', { ns: 'editor' })}</div>}>
           <EditorLazy value={body} onChange={setBody} docId={doc.id} onReady={(api) => (editorApiRef.current = api)} />
         </React.Suspense>
       </div>
       <div>
-        <button className="px-3 py-2 bg-black text-white rounded" onClick={save} disabled={saving}>{saving ? t('status.loading') : t('button.save')}</button>
-        <button className="ml-2 px-3 py-2 border rounded" onClick={insertAnchor}>{t('button.insertAnchor')}</button>
+        <button className="px-3 py-2 bg-black text-white rounded" onClick={save} disabled={saving}>{saving ? t('status.loading', { ns: 'editor' }) : t('button.save', { ns: 'editor' })}</button>
+        <button className="ml-2 px-3 py-2 border rounded" onClick={insertAnchor}>{t('button.insertAnchor', { ns: 'editor' })}</button>
         {lastAnchor && (
-          <span className="ml-3 text-xs text-gray-600">{t('label.lastAnchor', { id: lastAnchor.id, line: lastAnchor.line })}</span>
+          <span className="ml-3 text-xs text-gray-600">{t('label.lastAnchor', { ns: 'editor', id: lastAnchor.id, line: lastAnchor.line })}</span>
         )}
       </div>
       <AnchorsPanel docId={doc.id} editorApiRef={editorApiRef as any} />
       <div className="space-y-2">
         <div className="flex gap-2">
-          <input className="border rounded px-3 py-2 w-full" placeholder={t('placeholder.prompt')} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
-          <button className="px-3 py-2 border rounded" onClick={runAI}>{t('button.runAI')}</button>
+          <input className="border rounded px-3 py-2 w-full" placeholder={t('placeholder.prompt', { ns: 'editor' })} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+          <button className="px-3 py-2 border rounded" onClick={runAI}>{t('button.runAI', { ns: 'editor' })}</button>
           <button className="px-3 py-2 border rounded" onClick={async () => {
             if (!doc || !lastAnchor) return
             const res = await api.aiRun('local', doc.id, prompt, lastAnchor.id)
             setAiOut(res.text)
-          }} disabled={!lastAnchor}>{t('button.runAIAnchor')}</button>
+          }} disabled={!lastAnchor}>{t('button.runAIAnchor', { ns: 'editor' })}</button>
         </div>
         {aiOut && (
           <pre className="border rounded p-3 whitespace-pre-wrap text-sm">{aiOut}</pre>
@@ -132,36 +132,36 @@ function DocPage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
         <section>
-          <h2 className="font-semibold mb-2">Backlinks</h2>
+          <h2 className="font-semibold mb-2">{t('backlinks', { ns: 'graph' })}</h2>
           <ul className="space-y-2">
             {backlinks.map((d) => (
               <li key={d.id}>
                 <Link to={`/doc/${d.id}`}>{d.title || d.slug}</Link>
               </li>
             ))}
-            {!backlinks.length && <li className="text-sm text-gray-600">None</li>}
+            {!backlinks.length && <li className="text-sm text-gray-600">{t('none', { ns: 'common' })}</li>}
           </ul>
         </section>
         <section>
-          <h2 className="font-semibold mb-2">Neighbors</h2>
+          <h2 className="font-semibold mb-2">{t('neighbors', { ns: 'graph' })}</h2>
           <ul className="space-y-2">
             {neighbors.map((d) => (
               <li key={d.id}>
                 <Link to={`/doc/${d.id}`}>{d.title || d.slug}</Link>
               </li>
             ))}
-            {!neighbors.length && <li className="text-sm text-gray-600">None</li>}
+            {!neighbors.length && <li className="text-sm text-gray-600">{t('none', { ns: 'common' })}</li>}
           </ul>
         </section>
         <section>
-          <h2 className="font-semibold mb-2">Related</h2>
+          <h2 className="font-semibold mb-2">{t('related', { ns: 'graph' })}</h2>
           <ul className="space-y-2">
             {related.map((d) => (
               <li key={d.id}>
                 <Link to={`/doc/${d.id}`}>{d.title || d.slug}</Link>
               </li>
             ))}
-            {!related.length && <li className="text-sm text-gray-600">None</li>}
+            {!related.length && <li className="text-sm text-gray-600">{t('none', { ns: 'common' })}</li>}
           </ul>
         </section>
       </div>
