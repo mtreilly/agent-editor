@@ -31,6 +31,9 @@ func exportCmd() *cobra.Command {
         default:
             return fmt.Errorf("invalid --format %s (expected json|jsonl|tar)", format)
         }
+        if (format == "jsonl" || format == "tar") && outFile == "" {
+            return fmt.Errorf("--out is required when format=%s", format)
+        }
 
         cfg := config.Load()
         cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)

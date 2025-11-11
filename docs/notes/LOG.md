@@ -25,3 +25,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Export formats
 - `agent-editor export docs --format jsonl --out docs.jsonl` writes newline-delimited JSON for streaming pipelines.
 - `agent-editor export docs --format tar --out docs.tar` builds a tarball containing `docs.json` + `meta.json`; attachments TODO.
+
+## 2025-11-11 — Export tar tests
+- Added Go unit test for writeDocsTar to ensure docs.json/meta.json integrity.
+- Enforced --out requirement when format=jsonl|tar.
