@@ -18,6 +18,7 @@ function Root() {
           <Link to="/repo">{t('nav.repos')}</Link>
           <Link to="/graph/">{t('nav.graph')}</Link>
           <Link to="/settings/providers">{t('nav.settings')}</Link>
+          <Link to="/plugins">Plugins</Link>
         </nav>
       </header>
       <Outlet />

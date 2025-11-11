@@ -97,3 +97,5 @@ export type Provider = { name: string; kind: 'local' | 'remote'; enabled: boolea
 export const aiProvidersList = () => safeInvoke<Provider[]>('ai_providers_list')
 export const aiProvidersEnable = (name: string) => safeInvoke<{ updated: boolean }>('ai_providers_enable', { name })
 export const aiProvidersDisable = (name: string) => safeInvoke<{ updated: boolean }>('ai_providers_disable', { name })
+
+export const ipcCall = <T = any>(method: string, params?: any) => safeInvoke<T>(method, params)
