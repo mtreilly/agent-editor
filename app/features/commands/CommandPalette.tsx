@@ -34,6 +34,7 @@ export function CommandPalette() {
 
   const all = getCommands()
   const items = all.filter((c) => c.title.toLowerCase().includes(q.toLowerCase()))
+  const listboxId = 'palette-listbox'
 
   if (!open) return null
   return (
@@ -52,19 +53,26 @@ export function CommandPalette() {
                 if (it) {
                   Promise.resolve(it.run()).finally(() => setOpen(false))
                 }
+              } else if (e.key === 'Home') {
+                setActive(0)
+              } else if (e.key === 'End') {
+                setActive(Math.max(0, items.length - 1))
               }
             }}
             placeholder={t('placeholder.type')}
             className="w-full px-3 py-2 border-b rounded-t outline-none"
             aria-label="Command palette input"
+            aria-controls={listboxId}
           />
-          <ul className="max-h-64 overflow-auto" role="listbox" aria-label={t('title')}>
-            {items.length === 0 && <li className="px-3 py-2 text-sm text-gray-500">{t('noMatches')}</li>}
+          <ul className="max-h-64 overflow-auto" id={listboxId} role="listbox" aria-label={t('title')} aria-activedescendant={items[active] ? `palette-option-${active}` : undefined}>
+            {items.length === 0 && <li className="px-3 py-2 text-sm text-gray-500" role="option" aria-disabled="true">{t('noMatches')}</li>}
             {items.map((c, i) => (
               <li
                 key={c.id}
+                id={`palette-option-${i}`}
                 className={`px-3 py-2 cursor-pointer ${i === active ? 'bg-blue-50' : ''}`}
                 role="option"
+                aria-selected={i === active}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => {
                   Promise.resolve(c.run()).finally(() => setOpen(false))

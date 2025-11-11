@@ -20,5 +20,8 @@ tmux split-window -h -t "$SESSION":0.0
 tmux send-keys -t "$SESSION":0.1 'pnpm test:e2e' C-m
 
 tmux select-layout -t "$SESSION":0 tiled
-tmux attach -t "$SESSION"
-
+if [[ -n "${HEADLESS:-}" ]]; then
+  echo "[tmux-e2e] HEADLESS set; not attaching to tmux session '$SESSION'" >&2
+else
+  tmux attach -t "$SESSION"
+fi
