@@ -35,6 +35,11 @@ See docs/guides/BUILD.md for prerequisites and troubleshooting.
 - Plugins guide: `docs/guides/PLUGINS.md`
 - ElectricSQL prep: `docs/guides/ELECTRIC.md`
 
+## Tests
+- E2E (web stubs): `HEADLESS=1 pnpm tmux:e2e`
+- Smoke (sidecar + CLI): `pnpm tmux:smoke` or `pnpm smoke:cli`
+- CI smoke: `HEADLESS=1 pnpm tmux:ci-smoke`
+
 ## Dev Workflow (tmux + vibe)
 - Use tmux scripts for dev/smoke/bench/tests: see `AGENTS.md` → Vibe + Tmux.
 - Send start/progress/done notifications via `pnpm vibe:*` (optional channel via `VIBE_CHANNEL`).
