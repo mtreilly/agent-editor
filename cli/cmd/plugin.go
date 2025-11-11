@@ -2,6 +2,7 @@ package cmd
 
 import (
     "context"
+    "fmt"
     "agent-editor/cli/internal/config"
     "agent-editor/cli/internal/output"
     "agent-editor/cli/internal/rpc"
@@ -70,11 +71,18 @@ func pluginCmd() *cobra.Command {
         return output.Print(res, cfg.OutputFormat)
     }}
 
+    coreList := &cobra.Command{Use: "core-list", RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load(); cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background(); var res []map[string]interface{}
+        if err := cli.Call(ctx, "plugins_core_list", map[string]interface{}{}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+
     events := &cobra.Command{Use: "events", Short: "Plugin events"}
     eventsTail := &cobra.Command{Use: "tail", RunE: func(cmd *cobra.Command, args []string) error { fmt.Println("plugin events tail (stub)"); return nil }}
     events.AddCommand(eventsTail)
 
-    plugin.AddCommand(install, list, info, remove, enable, disable, call, callCore, startCore, stopCore, events)
+    plugin.AddCommand(install, list, info, remove, enable, disable, call, callCore, startCore, stopCore, coreList, events)
     // perms subcommand
     perms := &cobra.Command{Use: "perms", Short: "Manage plugin permissions"}
     permsSet := &cobra.Command{Use: "set <name> --json <perms>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
