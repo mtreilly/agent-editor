@@ -28,3 +28,26 @@ This guide explains the provider registry, key handling, defaults, and UI/CLI fl
 ## Redaction & Privacy
 - `ai_run` builds minimal context and passes it through `redact()` to mask common secrets (AWS keys, bearer tokens, api_key params, high-entropy tokens).
 - Remote providers require key and explicit enable. Provider metadata (provider/model) is stored in `ai_trace.response` for transparency.
+
+## OpenRouter adapter
+- Domain: requests are sent to the OpenRouter API with TLS (rustls). Network remains off unless provider is explicitly enabled.
+- Model config: set via `ai_provider_model_set('openrouter', '<model>')` or in UI. Common default: `openrouter/auto`.
+- Key storage: use `ai_provider_key_set openrouter <key>` (CLI) or the Providers settings page. The app uses OS keychain when built with `keyring`; DB fallback stores only `key_set`.
+- Domain allowlist: enforced by host; ensure the OpenRouter domain is present in `permissions.net.domains` when testing via plugins.
+
+### End-to-end example (CLI)
+```bash
+agent-editor ai providers enable openrouter
+agent-editor ai providers key set openrouter sk-or-...
+agent-editor ai providers model set openrouter openrouter/auto
+agent-editor settings default-provider set openrouter
+# Run AI on a doc (use doc id/slug)
+agent-editor doc get <doc-id> --content -o json   # confirm doc
+# Use UI to run AI, or trigger via IPC/CLI methods (see docs/manual/RPC.md for ai_run)
+```
+
+## Troubleshooting
+- Provider disabled: The UI disables Run AI with a hint; enable provider and set a key (remote providers).
+- Missing key: Set the key in Providers settings or via CLI; verify with `ai providers test`.
+- Model not set: Some providers (OpenRouter) accept an optional model; set one if required by your API plan.
+- Redaction: If responses appear redacted unexpectedly, ensure secrets are not echoed back by prompts; the redactor masks bearer tokens and high-entropy strings.
