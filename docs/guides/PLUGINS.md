@@ -33,5 +33,25 @@ This guide explains the UI/Core plugin model, permissions, and demos.
 ## Sample plugin
 - `plugins/echo-core/echo.js` — minimal Node echo over JSON-RPC, used by demos.
 
+### UI Plugin example (TypeScript)
+```ts
+// plugins/hello-world/index.ts
+import type { PluginV1 } from '../../src/plugins/types'
+
+const plugin: PluginV1 = {
+  name: 'hello-world',
+  version: '1.0.0',
+  kind: 'ui',
+  async activate(ctx) {
+    return {
+      commands: [
+        { id: 'hello.say', title: 'Say Hello', run: async () => alert('Hello!') },
+      ],
+    }
+  },
+}
+export default plugin
+```
+
 ## Tests
 - Unit tests cover capability gates and invalid envelopes in `commands.rs`.

@@ -43,3 +43,27 @@ This is a living list of Tauri IPC/JSON-RPC methods and their intent. See `src-t
 
 ## Sidecar
 - `serve_api_start(port?)` — start JSON-RPC HTTP server (127.0.0.1:35678)
+
+## Adding a new RPC
+Follow this checklist to add a new endpoint safely:
+
+1) Tauri command (Rust)
+   - Add a function in `src-tauri/src/commands.rs` with `#[tauri::command]` and a small, typed signature.
+   - Register it in `src-tauri/src/main.rs` under `.invoke_handler(...)`.
+   - Keep DB access within a short scope (lock, query, drop lock); return structured values (`serde_json` or typed structs with `Serialize`).
+
+2) JSON-RPC (sidecar)
+   - If you want CLI access, map the new command in `src-tauri/src/api.rs` (if using a different route) or call the Tauri command directly from there.
+
+3) IPC client (TS)
+   - Add a wrapper in `src/ipc/client.ts` exposing the new method.
+   - Provide a sane web stub for Playwright (non-Tauri) contexts.
+
+4) CLI mapping (Go)
+   - Add a cobra subcommand in `cli/cmd/*.go` that calls the JSON-RPC method via `cli/internal/rpc`.
+   - Support `-o json|yaml|text` and ensure errors print and exit non‑zero.
+
+5) Tests and docs
+   - Add unit tests in Rust if the command involves validation/permissions.
+   - Add/extend E2E tests if there is new UI.
+   - Document the method here and update guides if it introduces new flows.
