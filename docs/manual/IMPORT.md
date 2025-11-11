@@ -61,6 +61,4 @@ Both dry runs and real imports return a structured summary (printed by the CLI):
 - `overwrite`: existing docs are updated in place, a new version/blob is created, FTS rows are rebuilt, and provenance is recorded. When the incoming body matches the current version hash, the importer skips the update to avoid redundant versions (counts under `skipped`).
 
 ## Current Limitations / Next Work
-- Attachments and binary blobs are not yet restored (pending blob storage work).
-- Tar archives ignore `docs/*.md` when `body` is present; future work will backfill missing bodies from markdown files.
-- Imports always write a fresh version snapshot even if hashes match; dedupe is TODO once version hashes are included in archives.
+- CLI progress events currently stream as text only; JSON output mode doesn’t include progress updates yet.
