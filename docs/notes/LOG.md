@@ -33,3 +33,6 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 
 ## 2025-11-11 — CLI imports/tests
 - Switched CLI imports to module path `github.com/agent-editor/agent-editor/cli/...` and fixed ai command braces so `go test ./cli/...` passes.
+
+## 2025-11-11 — Import plan
+- Added docs/plans/IMPORT_PLAN.md covering archive formats, CLI entrypoint, and next steps for import pipeline.
