@@ -1,6 +1,6 @@
 # Status — agent-editor
 
-Phase: M1 Core DB + Scanner + FTS (COMPLETE)
+Phase: M2 Editor + Wiki + Graph (COMPLETE)
 
 Completed
 - Core DB schema + FTS5 virtual table
@@ -37,18 +37,16 @@ Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset
 - Scan throughput: >= 1,000 docs/sec on synthetic note set; >= 200 docs/sec on mixed repos
 
-Exit criteria met
-- repo add/scan works end-to-end with JSON-RPC and CLI
-- Search returns valid JSON and matches FTS results (P95 on fixtures < 50ms)
-- FTS invariant checks pass in `scripts/cli-smoke.sh` (fts_missing=0, errors=0)
+Exit criteria met (M1 + M2)
+- M1: repo add/scan works end-to-end with JSON-RPC and CLI; search returns valid JSON and matches FTS results (P95 on fixtures < 50ms); FTS invariant checks pass in `scripts/cli-smoke.sh` (fts_missing=0, errors=0)
+- M2: search UX (keyboard + ARIA + sanitized snippets); graph neighbors depth + path tool; editor anchors (insert/jump/copy) + `?anchor=` auto-jump; i18n extracted for core routes; providers registry + settings UI
 
-Next Phase: M2 Editor + Wiki + Graph
-- UI: search refinements (highlight snippets, keyboard nav), performance tweaks, settings
-- Graph UI: depth controls, shortest path visualization, caching
-- Editor: anchors list/jump-to/rename; copy link; improved wiki-link UX; i18n extraction for visible strings
-- Parser hardening (wiki-link edge cases), more unit tests (non-ASCII, nested links, headings)
-- Playwright: stabilize flaky selectors for Home/doc
-- Sidecar: add DB trace + SQL logging for RPC handler around SEARCH; investigate post-dedupe SQL error path
+Next Phase: M3 Plugins + Providers
+- UI Plugins: surface commands via host; integrate with command palette; plugin enable/disable lifecycle
+- Core Plugins: wire spawn and JSON-RPC IPC; capability checks (FS/net/DB/AI)
+- Providers: add real Codex/Claude/OpenRouter/OpenCode adapters; keychain storage; stricter redaction
+- Parser hardening + more unit tests (nested links, non-ASCII, headings)
+- E2E: add plugin UI smoke + provider selection tests (with stubs)
 
 Notes
 - Tauri build requires a valid RGBA icon at `src-tauri/icons/icon.png` for packaging.

@@ -825,7 +825,7 @@ M1 Core DB + Scanner + FTS — COMPLETE
 - FTS invariants verified (fts_missing=0) by `scripts/cli-smoke.sh`
 - Sidecar JSON-RPC stable; packaging readiness (RGBA icon, AE_DB/.dev DB)
 
-M2 Editor + Wiki + Graph — In Progress (exit criteria)
+M2 Editor + Wiki + Graph — COMPLETE
 - Search UX: keyboard navigation, sanitized snippets, listbox ARIA with roving focus
 - Graph UI: neighbor depth control (1–3), shortest path tool, e2e smoke
 - Editor: anchors insert/jump/copy link; doc route supports `?anchor=` auto-jump
