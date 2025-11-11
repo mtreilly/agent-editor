@@ -6,6 +6,7 @@ This guide documents the archive formats produced by `agent-editor export docs` 
 - `docs.json` — authoritative metadata `{id, repo_id, slug, title, body, is_deleted, updated_at, versions?}`.
 - `versions.json` — optional `{doc_id, versions:[{id, hash, created_at, message}]}` bundles.
 - `docs/*.md` — raw Markdown snapshots (`docs/<slug>-<id>.md`) used when `body` is omitted.
+- `attachments/<slug-id>/<filename>` — optional binary assets imported into `doc_asset` (slug-id matches the prefix used for `docs/<slug-id>.md`).
 - `meta.json` — summary metadata (`created_at`, `doc_count`, `version`).
 - `json` / `jsonl` inputs skip the tar container but must include the same document fields.
 
@@ -24,8 +25,9 @@ agent-editor import docs <path> [--repo <id> | --new-repo <name>] \
    - existing repo (`--repo`) must exist;
    - new repo path stored under `.import/<slugified-name>`.
 3. For tar archives, hydrate missing doc bodies by loading the matching `docs/<slug-id>.md` snapshot (slug sanitation matches exporter rules, so long names/characters resolve correctly). If the Markdown file is missing, the import fails early with a helpful error.
-4. For dry runs, count inserts/updates/skips via `simulate_import`.
-5. For real imports, run a single DB transaction that:
+4. Attachments under `attachments/<slug-id>/<filename>` are imported into `doc_asset` (deduped by filename per doc) and stored as blobs with inferred MIME types.
+5. For dry runs, count inserts/updates/skips via `simulate_import`.
+6. For real imports, run a single DB transaction that:
    - inserts or updates `doc`, `doc_version`, and `doc_blob`;
    - refreshes `doc_fts` rows and rebuilds wiki-link edges;
    - writes provenance records with `source='import'` and `{path}` metadata.

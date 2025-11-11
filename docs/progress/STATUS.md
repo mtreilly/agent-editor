@@ -56,6 +56,7 @@ Completed
 - CLI Import: `agent-editor import docs` now parses json/jsonl/tar archives, supports dry-run, merge strategies, repo creation, provenance, and round-trip tests to keep versions/FTS/link data consistent.
 - CLI Import UX: progress events stream every ~25 docs so CLI shows `[import] …` lines while long imports run, preventing silent waits.
 - Import dedupe: overwrite strategy hashes bodies and skips writing doc_version rows when content is unchanged, keeping history lean.
+- Attachments: tar archives can include `attachments/<slug-id>/<filename>` files which are stored in `doc_asset` with inferred MIME.
 - CLI Reliability: CLI source now imports using module path so `go test ./cli/...` runs (fixes ai command braces and tar export tests).
 
 Bench targets (current phase)

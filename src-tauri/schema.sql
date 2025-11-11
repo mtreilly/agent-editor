@@ -47,6 +47,17 @@ CREATE TABLE IF NOT EXISTS doc_blob (
   size_bytes INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS doc_asset (
+  id TEXT PRIMARY KEY,
+  doc_id TEXT NOT NULL REFERENCES doc(id) ON DELETE CASCADE,
+  filename TEXT NOT NULL,
+  mime TEXT DEFAULT 'application/octet-stream',
+  size_bytes INTEGER NOT NULL,
+  blob_id TEXT NOT NULL REFERENCES doc_blob(id) ON DELETE RESTRICT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (doc_id, filename)
+);
+
 CREATE TABLE IF NOT EXISTS doc_version (
   id TEXT PRIMARY KEY,
   doc_id TEXT NOT NULL REFERENCES doc(id) ON DELETE CASCADE,

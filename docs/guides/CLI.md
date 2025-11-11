@@ -64,3 +64,4 @@ agent-editor import docs backup/docs.tar --new-repo imported --merge-strategy ov
 
 > Dry-run mode is enabled by default; pass `--dry-run=false` when you are ready to apply the import.
 > While the import runs the CLI streams `[import] …` progress lines (processed count + insert/update/skip stats) sourced from the backend progress log.
+> Tar archives may include binary files under `attachments/<slug-id>/<filename>`; they are imported into each doc's attachment list automatically.

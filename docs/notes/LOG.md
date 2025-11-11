@@ -61,3 +61,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Import dedupe
 - Overwrite imports now hash bodies and skip writing when content matches the current version, preventing redundant doc_version rows.
 - Added regression test and docs/manual update so behavior stays visible.
+
+## 2025-11-11 — Import attachments
+- Tar archives can now include `attachments/<slug-id>/<filename>`; importer stores them in `doc_asset` with inferred MIME types and binary blobs.
+- Added schema table, helper functions, and tests verifying attachment ingestion plus manual updates covering the format.

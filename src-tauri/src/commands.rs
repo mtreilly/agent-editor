@@ -1,4 +1,5 @@
 use crate::{db::Db, scan};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use crate::secrets;
 use crate::ai;
 use tauri::Emitter;
@@ -593,6 +594,52 @@ mod tests_import {
         assert!(content.contains("\"status\":\"imported\""));
         let _ = std::fs::remove_file(&progress_path);
     }
+
+    #[test]
+    fn import_docs_imports_attachments() {
+        let db = test_db();
+        let tar_path = std::env::temp_dir().join(format!("ae-import-attachments-{}.tar", uuid::Uuid::new_v4()));
+        let doc_id = uuid::Uuid::new_v4().to_string();
+        let slug = "Guide Attachments";
+        let slug_key = format!("{}-{}", sanitize_slug_for_filename(slug), doc_id);
+        let repo_name = "Attachments Repo";
+        {
+            let file = File::create(&tar_path).unwrap();
+            let mut builder = Builder::new(file);
+            let docs_payload = serde_json::json!([{
+                "id": doc_id,
+                "repo_id": "repo_attach",
+                "slug": slug,
+                "title": "Guide Attachments",
+                "body": "# Body",
+                "is_deleted": false
+            }]);
+            append_tar_bytes(&mut builder, "docs.json", serde_json::to_vec(&docs_payload).unwrap().as_slice());
+            append_tar_bytes(
+                &mut builder,
+                "meta.json",
+                serde_json::to_vec(&serde_json::json!({"doc_count": 1, "format": "json"})).unwrap().as_slice(),
+            );
+            let doc_md_path = format!("docs/{}.md", slug_key);
+            append_tar_bytes(&mut builder, &doc_md_path, b"# Body");
+            let attachment_path = format!("attachments/{}/logo.png", slug_key);
+            append_tar_bytes(&mut builder, &attachment_path, b"\x89PNGdata");
+            builder.finish().unwrap();
+        }
+        let docs = read_docs_from_tar(&tar_path).unwrap();
+        assert_eq!(docs[0].attachments.as_ref().map(|v| v.len()), Some(1));
+        {
+            let conn = db.0.lock();
+            let _ = import_docs_apply(&conn, docs, None, Some(repo_name.into()), false, "keep", tar_path.to_string_lossy().as_ref(), None).unwrap();
+        }
+        {
+            let conn = db.0.lock();
+            let count: i64 = conn.query_row("SELECT COUNT(*) FROM doc_asset", [], |r| r.get(0)).unwrap();
+            assert_eq!(count, 1);
+            let mime: String = conn.query_row("SELECT mime FROM doc_asset LIMIT 1", [], |r| r.get(0)).unwrap();
+            assert_eq!(mime, "image/png");
+        }
+    }
 }
 
 #[tauri::command]
@@ -924,11 +971,18 @@ fn parse_doc_filename_keys(stem: &str) -> (Option<String>, Option<String>) {
     (None, if stem.is_empty() { None } else { Some(stem.to_string()) })
 }
 
+struct PendingAttachment {
+    id_key: Option<String>,
+    slug_key: String,
+    attachment: DocAttachmentImport,
+}
+
 fn read_docs_from_tar(path: &Path) -> Result<Vec<DocImportRow>, String> {
     let file = File::open(path).map_err(|e| e.to_string())?;
     let mut archive = Archive::new(file);
     let mut docs_buf = Vec::new();
     let mut versions_buf = Vec::new();
+    let mut pending_attachments: Vec<PendingAttachment> = Vec::new();
     let mut body_by_id: HashMap<String, String> = HashMap::new();
     let mut body_by_slug: HashMap<String, String> = HashMap::new();
     for entry in archive.entries().map_err(|e| e.to_string())? {
@@ -939,6 +993,32 @@ fn read_docs_from_tar(path: &Path) -> Result<Vec<DocImportRow>, String> {
             entry.read_to_end(&mut docs_buf).map_err(|e| e.to_string())?;
         } else if name == "versions.json" {
             entry.read_to_end(&mut versions_buf).map_err(|e| e.to_string())?;
+        } else if name.starts_with("attachments/") {
+            let mut buf = Vec::new();
+            entry.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+            if buf.is_empty() {
+                continue;
+            }
+            let rel = name.trim_start_matches("attachments/");
+            let mut parts = rel.splitn(2, '/');
+            let ident = parts.next().unwrap_or("").to_string();
+            let filename = parts.next().unwrap_or("").to_string();
+            if ident.is_empty() || filename.is_empty() {
+                continue;
+            }
+            let (doc_id_key, slug_hint) = parse_doc_filename_keys(&ident);
+            let slug_key = slug_hint.unwrap_or_else(|| ident.clone());
+            pending_attachments.push(PendingAttachment {
+                id_key: doc_id_key,
+                slug_key,
+                attachment: DocAttachmentImport {
+                    filename,
+                    mime: None,
+                    encoding: Some("binary".into()),
+                    data_base64: None,
+                    bytes: buf,
+                },
+            });
         } else if name.starts_with("docs/") && name.ends_with(".md") {
             let mut buf = Vec::new();
             entry.read_to_end(&mut buf).map_err(|e| e.to_string())?;
@@ -976,7 +1056,13 @@ fn read_docs_from_tar(path: &Path) -> Result<Vec<DocImportRow>, String> {
             }
         }
     }
-    for doc in docs.iter_mut() {
+    let mut doc_id_index: HashMap<String, usize> = HashMap::new();
+    let mut doc_slug_index: HashMap<String, usize> = HashMap::new();
+    for (idx, doc) in docs.iter_mut().enumerate() {
+        if let Some(ref doc_id) = doc.id {
+            doc_id_index.insert(doc_id.clone(), idx);
+        }
+        doc_slug_index.insert(sanitize_slug_for_filename(&doc.slug), idx);
         let has_body = doc.body.as_ref().map(|b| !b.is_empty()).unwrap_or(false);
         if has_body {
             continue;
@@ -993,6 +1079,19 @@ fn read_docs_from_tar(path: &Path) -> Result<Vec<DocImportRow>, String> {
             continue;
         }
         return Err(format!("doc {} missing body in docs.json and docs/*.md", doc.slug));
+    }
+    for pending in pending_attachments {
+        if let Some(ref doc_id) = pending.id_key {
+            if let Some(&idx) = doc_id_index.get(doc_id) {
+                docs[idx].attachments.get_or_insert_with(Vec::new).push(pending.attachment);
+                continue;
+            }
+        }
+        if let Some(&idx) = doc_slug_index.get(&pending.slug_key) {
+            docs[idx].attachments.get_or_insert_with(Vec::new).push(pending.attachment);
+            continue;
+        }
+        return Err(format!("attachment for key {} not matched to doc", pending.slug_key));
     }
     Ok(docs)
 }
@@ -1137,6 +1236,7 @@ fn import_doc_record(
         .as_ref()
         .and_then(|v| v.last())
         .and_then(|v| v.message.clone());
+    let attachments = doc.attachments.take();
 
     let existing: Option<String> = conn
         .query_row(
@@ -1154,15 +1254,18 @@ fn import_doc_record(
                 return Ok(());
             }
             if content_matches_current(conn, &doc_id, &body)? {
+                import_doc_attachments(conn, &doc_id, attachments)?;
                 stats.skipped += 1;
                 return Ok(());
             }
             update_doc_record(conn, &doc_id, repo_id, &slug, &title, &body, is_deleted, message.as_deref(), import_path)?;
+            import_doc_attachments(conn, &doc_id, attachments)?;
             stats.updated += 1;
         }
         None => {
             let doc_id = doc.id.unwrap_or_else(|| Uuid::new_v4().to_string());
             insert_doc_record(conn, &doc_id, repo_id, folder_id, &slug, &title, &body, is_deleted, message.as_deref(), import_path)?;
+            import_doc_attachments(conn, &doc_id, attachments)?;
             stats.inserted += 1;
         }
     }
@@ -1220,6 +1323,16 @@ fn update_doc_record(
     Ok(())
 }
 
+fn insert_doc_blob(conn: &Connection, content: &[u8], encoding: Option<&str>, mime: Option<&str>) -> Result<String, String> {
+    let blob_id = Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO doc_blob(id,content,size_bytes,encoding,mime) VALUES(?,?,?,?,?)",
+        params![blob_id, content, content.len() as i64, encoding.unwrap_or("utf8"), mime.unwrap_or("text/markdown")],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(blob_id)
+}
+
 fn doc_version_hash(doc_id: &str, body: &str) -> String {
     let body_hash = blake3::hash(body.as_bytes()).to_hex().to_string();
     format!("{doc_id}:{body_hash}")
@@ -1239,12 +1352,7 @@ fn content_matches_current(conn: &Connection, doc_id: &str, body: &str) -> Resul
 }
 
 fn write_doc_version(conn: &Connection, doc_id: &str, body: &str, message: Option<&str>) -> Result<(), String> {
-    let blob_id = Uuid::new_v4().to_string();
-    conn.execute(
-        "INSERT INTO doc_blob(id,content,size_bytes) VALUES(?,?,?)",
-        params![blob_id, body.as_bytes(), body.len() as i64],
-    )
-    .map_err(|e| e.to_string())?;
+    let blob_id = insert_doc_blob(conn, body.as_bytes(), Some("utf8"), Some("text/markdown"))?;
     let hash = doc_version_hash(doc_id, body);
     let version_id = Uuid::new_v4().to_string();
     conn.execute(
@@ -1281,6 +1389,38 @@ fn record_import_provenance(conn: &Connection, doc_id: &str, path: &str) -> Resu
         params![Uuid::new_v4().to_string(), "doc", doc_id, "import", meta.to_string()],
     )
     .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn infer_mime_from_filename(filename: &str) -> &'static str {
+    let ext = filename.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        "pdf" => "application/pdf",
+        "txt" => "text/plain",
+        "md" => "text/markdown",
+        "json" => "application/json",
+        _ => "application/octet-stream",
+    }
+}
+
+fn import_doc_attachments(conn: &Connection, doc_id: &str, attachments: Option<Vec<DocAttachmentImport>>) -> Result<(), String> {
+    let Some(mut list) = attachments else { return Ok(()); };
+    for mut attachment in list.drain(..) {
+        let bytes = attachment.take_bytes()?;
+        let encoding = attachment.encoding.as_deref().unwrap_or("binary");
+        let mime = attachment.mime.as_deref().unwrap_or_else(|| infer_mime_from_filename(&attachment.filename));
+        let blob_id = insert_doc_blob(conn, &bytes, Some(encoding), Some(mime))?;
+        let asset_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO doc_asset(id,doc_id,filename,mime,size_bytes,blob_id,created_at) VALUES(?,?,?,?,?,?,datetime('now'))",
+            params![asset_id, doc_id, attachment.filename, mime, bytes.len() as i64, blob_id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 
@@ -2235,4 +2375,29 @@ struct DocImportRow {
     is_deleted: Option<bool>,
     updated_at: Option<String>,
     versions: Option<Vec<DocVersionImport>>,
+    #[serde(default)]
+    attachments: Option<Vec<DocAttachmentImport>>,
+}
+
+#[derive(Deserialize)]
+struct DocAttachmentImport {
+    filename: String,
+    mime: Option<String>,
+    encoding: Option<String>,
+    #[serde(default)]
+    data_base64: Option<String>,
+    #[serde(skip)]
+    bytes: Vec<u8>,
+}
+
+impl DocAttachmentImport {
+    fn take_bytes(&mut self) -> Result<Vec<u8>, String> {
+        if !self.bytes.is_empty() {
+            return Ok(std::mem::take(&mut self.bytes));
+        }
+        if let Some(data) = self.data_base64.take() {
+            return STANDARD.decode(data).map_err(|e| e.to_string());
+        }
+        Err(format!("attachment {} missing data", self.filename))
+    }
 }
