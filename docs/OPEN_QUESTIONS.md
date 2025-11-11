@@ -20,3 +20,5 @@ Log uncertainties, pending decisions, and deferred work here. Keep items concise
 
 ## Notes
 - When closing an item, link to the resolving commit/PR and docs update.
+
+- Plugin lifecycle: soft timeouts for call-core remain TODO. Current implementation logs stdout/stderr and restarts up to 3x; add watchdog to kill unresponsive child honoring PLUGIN_CALL_TIMEOUT_MS.

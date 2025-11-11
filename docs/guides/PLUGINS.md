@@ -23,6 +23,10 @@ This guide explains the UI/Core plugin model, permissions, and demos.
 ## Core Host (Rust)
 - `plugins_spawn_core|plugins_shutdown_core|plugins_call_core|plugins_core_list` in `commands.rs`.
 - Registry keeps child process handles; `plugins_core_list` returns `{name,pid,running}`.
+ - Lifecycle polish:
+   - Restart policy: auto-restart up to 3 times with exponential backoff when a core plugin exits unexpectedly.
+   - Logging: core plugins' stderr is tailed into `.sidecar.log` with `[plugin:<name>]` prefixes; stdout lines returned from calls are also logged.
+   - Call timeout: configurable via `PLUGIN_CALL_TIMEOUT_MS` (planned). Current implementation reads synchronously; watchdog-based timeout will be added in a follow-up.
 
 ## Demos (tmux)
 - RPC/FS: `pnpm tmux:plugin-rpc-demo`

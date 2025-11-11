@@ -751,7 +751,61 @@ pub async fn plugins_upsert(name: String, kind: Option<String>, version: Option<
 }
 
 // -------- Core Plugin spawn/stop/call ---------
-struct CoreProc { child: Child, stdin: Option<ChildStdin>, stdout: Option<BufReader<ChildStdout>> }
+struct CoreProc {
+    child: Child,
+    stdin: Option<ChildStdin>,
+    stdout: Option<BufReader<ChildStdout>>,
+    exec: String,
+    args: Vec<String>,
+    restart_count: u32,
+    max_restarts: u32,
+    backoff_ms: u64,
+}
+
+fn plugin_log_line(name: &str, stream: &str, line: &str) {
+    use std::fs::OpenOptions;
+    use std::io::Write as _;
+    let ts_secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let mut msg = String::new();
+    msg.push_str(&format!("[{}][plugin:{}][{}] ", ts_secs, name, stream));
+    // Trim trailing newlines to keep log tidy
+    let mut l = line.to_string();
+    while l.ends_with('\n') || l.ends_with('\r') { l.pop(); }
+    msg.push_str(&l);
+    msg.push('\n');
+    if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(".sidecar.log") {
+        let _ = f.write_all(msg.as_bytes());
+    }
+}
+
+fn spawn_core_child(name: &str, exec: &str, args: &Vec<String>) -> Result<(Child, Option<ChildStdin>, Option<BufReader<ChildStdout>>), String> {
+    let mut cmd = OsCommand::new(exec);
+    if !args.is_empty() { cmd.args(args); }
+    let mut child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
+        .spawn().map_err(|e| e.to_string())?;
+    // Spawn stderr logger thread
+    if let Some(stderr) = child.stderr.take() {
+        let name_owned = name.to_string();
+        std::thread::spawn(move || {
+            let mut br = BufReader::new(stderr);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                match br.read_line(&mut line) {
+                    Ok(0) => break,
+                    Ok(_) => plugin_log_line(&name_owned, "stderr", &line),
+                    Err(_) => break,
+                }
+            }
+        });
+    }
+    let stdin = child.stdin.take();
+    let stdout = child.stdout.take().map(BufReader::new);
+    Ok((child, stdin, stdout))
+}
 
 #[tauri::command]
 pub async fn plugins_spawn_core(name: String, exec: String, args: Option<Vec<String>>) -> Result<serde_json::Value, String> {
@@ -761,14 +815,19 @@ pub async fn plugins_spawn_core(name: String, exec: String, args: Option<Vec<Str
     if map.contains_key(&name) {
         return Err("already_running".into());
     }
-    let mut cmd = OsCommand::new(&exec);
-    if let Some(a) = args.as_ref() { cmd.args(a); }
-    let mut child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
-        .spawn().map_err(|e| e.to_string())?;
+    let args_v = args.unwrap_or_default();
+    let (child, stdin, stdout) = spawn_core_child(&name, &exec, &args_v)?;
     let pid = child.id();
-    let stdin = child.stdin.take();
-    let stdout = child.stdout.take().map(BufReader::new);
-    map.insert(name.clone(), CoreProc { child, stdin, stdout });
+    map.insert(name.clone(), CoreProc {
+        child,
+        stdin,
+        stdout,
+        exec,
+        args: args_v,
+        restart_count: 0,
+        max_restarts: 3,
+        backoff_ms: 200,
+    });
     Ok(serde_json::json!({"pid": pid}))
 }
 
@@ -905,6 +964,19 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
     let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));
     let mut map = reg.lock().map_err(|_| "lock_poison")?;
     if let Some(proc) = map.get_mut(&name) {
+        // Restart policy if process exited
+        if proc.child.try_wait().ok().flatten().is_some() {
+            if proc.restart_count < proc.max_restarts {
+                std::thread::sleep(std::time::Duration::from_millis(proc.backoff_ms * (1 << proc.restart_count)));
+                let (new_child, new_stdin, new_stdout) = spawn_core_child(&name, &proc.exec, &proc.args)?;
+                proc.child = new_child;
+                proc.stdin = new_stdin;
+                proc.stdout = new_stdout;
+                proc.restart_count += 1;
+            } else {
+                return Err("not_running".into());
+            }
+        }
         if let Some(stdin) = proc.stdin.as_mut() {
             stdin.write_all(line.as_bytes()).map_err(|e| e.to_string())?;
             stdin.write_all(b"\n").map_err(|e| e.to_string())?;
@@ -914,6 +986,7 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
             let mut buf = String::new();
             stdout.read_line(&mut buf).map_err(|e| e.to_string())?;
             let trimmed = buf.trim();
+            if !trimmed.is_empty() { plugin_log_line(&name, "stdout", trimmed); }
             if trimmed.is_empty() { return Ok(serde_json::json!({"ok": true})); }
             let val: serde_json::Value = serde_json::from_str(trimmed).unwrap_or(serde_json::json!({"line": trimmed}));
             return Ok(val);
