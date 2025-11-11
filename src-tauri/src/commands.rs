@@ -4,6 +4,10 @@ use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
+use std::collections::HashMap;
+use std::process::{Child, Command as OsCommand, Stdio};
+use std::sync::{Mutex, OnceLock};
+use std::path::Path;
 
 #[derive(Deserialize)]
 pub struct ScanFilters { pub include: Option<Vec<String>>, pub exclude: Option<Vec<String>> }
@@ -439,14 +443,32 @@ pub async fn plugins_remove(name: String, db: State<'_, std::sync::Arc<Db>>) -> 
 // -------- Core Plugin spawn/stop (stubs) ---------
 #[tauri::command]
 pub async fn plugins_spawn_core(name: String, exec: String, args: Option<Vec<String>>) -> Result<serde_json::Value, String> {
-    let _ = (name, exec, args);
-    Err("not_implemented".into())
+    static REG: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
+    let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut map = reg.lock().map_err(|_| "lock_poison")?;
+    if map.contains_key(&name) {
+        return Err("already_running".into());
+    }
+    let mut cmd = OsCommand::new(&exec);
+    if let Some(a) = args.as_ref() { cmd.args(a); }
+    let child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
+        .spawn().map_err(|e| e.to_string())?;
+    let pid = child.id();
+    map.insert(name.clone(), child);
+    Ok(serde_json::json!({"pid": pid}))
 }
 
 #[tauri::command]
 pub async fn plugins_shutdown_core(name: String) -> Result<serde_json::Value, String> {
-    let _ = name;
-    Err("not_implemented".into())
+    static REG: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
+    let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut map = reg.lock().map_err(|_| "lock_poison")?;
+    if let Some(mut ch) = map.remove(&name) {
+        let _ = ch.kill();
+        let _ = ch.wait();
+        return Ok(serde_json::json!({"stopped": true}));
+    }
+    Ok(serde_json::json!({"stopped": false}))
 }
 
 // -------- AI Providers ---------

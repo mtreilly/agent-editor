@@ -19,6 +19,7 @@
     "tmux:smoke": "bash scripts/tmux-smoke.sh",
     "tmux:e2e": "bash scripts/tmux-e2e.sh",
     "tmux:bench": "bash scripts/tmux-bench.sh",
+    "tmux:plugin-demo": "bash scripts/tmux-plugin-demo.sh",
     "tmux:bootstrap": "bash scripts/tmux-bootstrap.sh",
     "bench:fts": "bash scripts/bench-fts.sh the 50",
     "bench:scan": "bash scripts/bench-scan.sh",
