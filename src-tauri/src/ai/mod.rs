@@ -98,3 +98,35 @@ pub fn provider_test(db: &Db, name: &str, prompt: &str) -> Result<serde_json::Va
     // Deterministic stub result
     Ok(serde_json::json!({ "provider": name, "ok": true, "echo": prompt }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::{open_db, Db};
+    use rusqlite::params;
+
+    fn test_db() -> Db {
+        let p = std::env::temp_dir().join(format!("ae-ai-test-{}.db", uuid::Uuid::new_v4()));
+        open_db(&p).expect("open db")
+    }
+
+    #[test]
+    fn provider_test_disabled() {
+        let db = test_db();
+        let conn = db.0.lock();
+        conn.execute("UPDATE provider SET enabled=0 WHERE name='openrouter'", []).unwrap();
+        drop(conn);
+        let res = provider_test(&db, "openrouter", "ping");
+        assert_eq!(res.unwrap_err(), "disabled");
+    }
+
+    #[test]
+    fn provider_test_missing_key_remote() {
+        let db = test_db();
+        let conn = db.0.lock();
+        conn.execute("UPDATE provider SET enabled=1 WHERE name='openrouter'", []).unwrap();
+        drop(conn);
+        let res = provider_test(&db, "openrouter", "ping");
+        assert_eq!(res.unwrap_err(), "no_key");
+    }
+}
