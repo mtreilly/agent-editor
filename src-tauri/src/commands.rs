@@ -437,6 +437,20 @@ pub async fn plugins_remove(name: String, db: State<'_, std::sync::Arc<Db>>) -> 
     Ok(serde_json::json!({"removed": n>0}))
 }
 
+#[tauri::command]
+pub async fn plugins_upsert(name: String, kind: Option<String>, version: Option<String>, permissions: Option<String>, enabled: Option<bool>, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let kind = kind.unwrap_or_else(|| "core".to_string());
+    let version = version.unwrap_or_else(|| "dev".to_string());
+    let perms = permissions.unwrap_or_else(|| "{}".to_string());
+    let enabled = enabled.unwrap_or(true);
+    let conn = db.0.lock();
+    let n = conn.execute(
+        "INSERT INTO plugin(id,name,version,kind,manifest,permissions,enabled) VALUES(?, ?, ?, ?, json('{}'), ?, ?) ON CONFLICT(name) DO UPDATE SET permissions=excluded.permissions, enabled=excluded.enabled, version=excluded.version, kind=excluded.kind",
+        params![uuid::Uuid::new_v4().to_string(), name, version, kind, perms, if enabled {1} else {0}],
+    ).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"upserted": n>0}))
+}
+
 // -------- Core Plugin spawn/stop/call ---------
 struct CoreProc { child: Child, stdin: Option<ChildStdin>, stdout: Option<BufReader<ChildStdout>> }
 
@@ -481,6 +495,38 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
             .query_row(
                 "SELECT CASE WHEN enabled=1 AND COALESCE(json_extract(permissions,'$.core.call'),0)=1 THEN 1 ELSE 0 END FROM plugin WHERE name=?1",
                 params![name],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
+        if allowed == 0 { return Err("forbidden".into()); }
+    }
+    // Validate JSON-RPC envelope and method-level permissions
+    let parsed: serde_json::Value = serde_json::from_str(&line).map_err(|_| "invalid_request".to_string())?;
+    let method = parsed.get("method").and_then(|m| m.as_str()).unwrap_or("");
+    if method.is_empty() { return Err("invalid_request".into()); }
+    let perm_key: Option<&str> = if method.starts_with("fs.write") {
+        Some("$.fs.write")
+    } else if method.starts_with("fs.") {
+        Some("$.fs.read")
+    } else if method.starts_with("net.request") {
+        Some("$.net.request")
+    } else if method.starts_with("db.write") {
+        Some("$.db.write")
+    } else if method.starts_with("db.") {
+        Some("$.db.query")
+    } else if method.starts_with("ai.invoke") {
+        Some("$.ai.invoke")
+    } else if method.starts_with("scanner.register") {
+        Some("$.scanner.register")
+    } else {
+        None
+    };
+    if let Some(key) = perm_key {
+        let conn = db.0.lock();
+        let allowed: i64 = conn
+            .query_row(
+                "SELECT CASE WHEN enabled=1 AND COALESCE(json_extract(permissions,?1),0)=1 THEN 1 ELSE 0 END FROM plugin WHERE name=?2",
+                params![key, name],
                 |r| r.get(0),
             )
             .unwrap_or(0);

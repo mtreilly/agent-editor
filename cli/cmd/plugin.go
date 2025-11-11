@@ -75,5 +75,18 @@ func pluginCmd() *cobra.Command {
     events.AddCommand(eventsTail)
 
     plugin.AddCommand(install, list, info, remove, enable, disable, call, callCore, startCore, stopCore, events)
+    // perms subcommand
+    perms := &cobra.Command{Use: "perms", Short: "Manage plugin permissions"}
+    permsSet := &cobra.Command{Use: "set <name> --json <perms>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+        jsonStr, _ := cmd.Flags().GetString("json")
+        if jsonStr == "" { jsonStr = "{}" }
+        cfg := config.Load(); cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background(); var res map[string]interface{}
+        if err := cli.Call(ctx, "plugins_upsert", map[string]interface{}{"name": args[0], "permissions": jsonStr}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+    permsSet.Flags().String("json", "", "Permissions JSON, e.g. {'core':{'call':true},'fs':{'read':true}}")
+    perms.AddCommand(permsSet)
+    plugin.AddCommand(perms)
     return plugin
 }
