@@ -27,6 +27,18 @@ pnpm tauri build
 
 See docs/guides/BUILD.md for prerequisites and troubleshooting.
 
+## Learn the Codebase
+- Code map: `docs/guides/CODEMAP.md` (where things live and why)
+- RPC reference: `docs/manual/RPC.md`
+- Data model: `docs/manual/DATA_MODEL.md`
+- Providers guide: `docs/guides/PROVIDERS.md`
+- Plugins guide: `docs/guides/PLUGINS.md`
+- ElectricSQL prep: `docs/guides/ELECTRIC.md`
+
+## Dev Workflow (tmux + vibe)
+- Use tmux scripts for dev/smoke/bench/tests: see `AGENTS.md` → Vibe + Tmux.
+- Send start/progress/done notifications via `pnpm vibe:*` (optional channel via `VIBE_CHANNEL`).
+
 ## CLI
 - Binary lives under `cli/`. Example commands:
 ```bash
