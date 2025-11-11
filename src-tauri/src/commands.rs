@@ -187,6 +187,48 @@ mod tests_perm {
     }
 }
 
+#[cfg(test)]
+mod tests_plugins {
+    use super::*;
+    use std::io::Write as _;
+
+    fn has_node() -> bool {
+        std::process::Command::new("node").arg("--version").output().is_ok()
+    }
+
+    #[test]
+    fn core_call_watchdog_timeout() {
+        if !has_node() { return; }
+        // Spawn slow-core with 200ms response delay; set timeout to 50ms to trigger timeout
+        std::env::set_var("SLOW_DELAY_MS", "200");
+        let args = vec!["plugins/slow-core/slow.js".to_string()];
+        let (mut child, mut stdin_opt, stdout_opt) = spawn_core_child("slow", "node", &args).expect("spawn slow-core");
+        let mut stdin = stdin_opt.take().expect("has stdin");
+        // Send a valid JSON-RPC line
+        let line = r#"{"jsonrpc":"2.0","id":"1","method":"fs.read","params":{"path":"README.md"}}"#;
+        stdin.write_all(line.as_bytes()).unwrap();
+        stdin.write_all(b"\n").unwrap();
+        stdin.flush().unwrap();
+
+        // Read one line with timeout (50ms)
+        let stdout = stdout_opt.expect("has stdout");
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let mut reader = std::io::BufReader::new(stdout);
+            let mut buf = String::new();
+            let res = reader.read_line(&mut buf).map_err(|e| e.to_string());
+            let _ = tx.send((res, buf));
+        });
+        let got = rx.recv_timeout(std::time::Duration::from_millis(50));
+        // Ensure timeout (no line received in 50ms)
+        assert!(got.is_err(), "expected timeout before slow-core responds");
+
+        // Cleanup
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+}
+
 #[tauri::command]
 pub async fn repos_remove(id_or_name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let conn = db.0.lock();
