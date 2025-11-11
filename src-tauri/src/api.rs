@@ -170,6 +170,11 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             let n = conn.execute("UPDATE doc SET is_deleted=1 WHERE id=?1 OR slug=?1", params![p.doc_id]).map_err(|e| e.to_string())?;
             Ok(serde_json::json!({"deleted": n>0}))
         }
+        "import_docs" => {
+            let payload: crate::commands::ImportDocsPayload =
+                serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
+            crate::commands::import_docs_exec(&db, payload)
+        }
         "search" => {
             #[derive(Deserialize)] struct P { repo_id: Option<String>, query: String, limit: Option<i64>, offset: Option<i64> }
             let p: P = serde_json::from_value(req.params.unwrap_or_default()).map_err(|e| e.to_string())?;
@@ -311,3 +316,13 @@ pub async fn serve_api_start(port: Option<u16>, db: tauri::State<'_, Arc<Db>>, a
     let _ = app.emit("serve_api_started", serde_json::json!({"port": port}));
     Ok(())
 }
+//! JSON-RPC sidecar HTTP server (127.0.0.1:35678/rpc).
+//!
+//! Purpose
+//! - Provide a headless automation surface for the CLI and scripts.
+//! - Reuse the same core logic as Tauri IPC commands where possible.
+//!
+//! Notes
+//! - Endpoints expect JSON-RPC 2.0 envelopes: `{ "jsonrpc":"2.0", "id":"…", "method":"…", "params":{…} }`.
+//! - See `docs/manual/RPC.md` for a method map and curl examples.
+//! - Keep handlers thin and delegate to the code paths used by IPC commands.

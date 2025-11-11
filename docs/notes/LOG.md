@@ -40,3 +40,8 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Import CLI stub
 - Added `agent-editor import docs` CLI command that hits `import_docs` RPC (currently stubbed; validates --repo/--new-repo exclusivity).
 - Documented archive format and import flow in `docs/manual/IMPORT.md`.
+
+## 2025-11-11 — Import pipeline
+- `import_docs` RPC now applies json/jsonl/tar archives, honors dry-run by default, and enforces merge strategies (keep/overwrite).
+- New repo creation + folder scaffolding happen inside the import transaction; updates refresh FTS/link/provenance rows and attach a new version blob per doc.
+- Added Rust round-trip tests plus CLI manual updates; TODO: extend parser to hydrate bodies from `docs/*.md` when missing and add attachment support when blob storage lands.

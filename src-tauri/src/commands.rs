@@ -301,6 +301,185 @@ mod tests_export {
     }
 }
 
+#[cfg(test)]
+mod tests_import {
+    use super::*;
+    use crate::db::open_db;
+    use std::fs::File;
+    use std::sync::Arc;
+
+    fn test_db() -> Arc<Db> {
+        let p = std::env::temp_dir().join(format!("ae-import-test-{}.db", uuid::Uuid::new_v4()));
+        Arc::new(open_db(&p).expect("open db"))
+    }
+
+    fn ensure_repo(conn: &Connection, repo_id: &str) -> String {
+        let path = format!("/{}", repo_id);
+        conn.execute(
+            "INSERT OR IGNORE INTO repo(id,name,path,settings) VALUES(?,?,?,json('{}'))",
+            params![repo_id, repo_id, path],
+        ).unwrap();
+        let folder_id = format!("folder-{}", repo_id);
+        conn.execute(
+            "INSERT OR IGNORE INTO folder(id,repo_id,parent_id,path,slug) VALUES(?,?,?,?,?)",
+            params![folder_id, repo_id, Option::<String>::None, path, "root"],
+        ).unwrap();
+        folder_id
+    }
+
+    fn insert_doc(conn: &Connection, repo_id: &str, slug: &str, title: &str, body: &str) -> String {
+        let folder_id = ensure_repo(conn, repo_id);
+        let doc_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO doc(id,repo_id,folder_id,slug,title,is_deleted,current_version_id,size_bytes,line_count,created_at,updated_at) VALUES(?,?,?,?,?,?,NULL,?,?,datetime('now'),datetime('now'))",
+            params![doc_id, repo_id, folder_id, slug, title, 0, body.len() as i64, body.lines().count() as i64],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid, ?1, ?2, ?3, ?4 FROM doc d WHERE d.id=?5",
+            params![title, body, slug, repo_id, doc_id],
+        ).unwrap();
+        doc_id
+    }
+
+    #[test]
+    fn import_docs_round_trip_json() {
+        let db = test_db();
+        let export_path = std::env::temp_dir().join(format!("ae-import-roundtrip-{}.json", uuid::Uuid::new_v4()));
+        let export_path_str = export_path.to_string_lossy().to_string();
+        {
+            let conn = db.0.lock();
+            insert_doc(&conn, "repo_src", "welcome", "Welcome", "# Welcome\n\nBody", false);
+        }
+        {
+            let conn = db.0.lock();
+            let docs = fetch_doc_exports(&conn, Some("repo_src"), false).unwrap();
+            let file = File::create(&export_path).unwrap();
+            serde_json::to_writer(file, &docs).unwrap();
+        }
+        let docs = read_docs_from_path(export_path.as_path()).unwrap();
+        {
+            let conn = db.0.lock();
+            let res = import_docs_apply(&conn, docs, None, Some("Imported Repo".into()), false, "keep", &export_path_str).unwrap();
+            assert_eq!(res["inserted"].as_u64().unwrap(), 1);
+            assert_eq!(res["status"].as_str(), Some("imported"));
+        }
+        {
+            let conn = db.0.lock();
+            let repo_id: String = conn
+                .query_row("SELECT id FROM repo WHERE name='Imported Repo'", [], |r| r.get(0))
+                .unwrap();
+            let (doc_id, size_bytes, line_count): (String, i64, i64) = conn
+                .query_row(
+                    "SELECT id,size_bytes,line_count FROM doc WHERE repo_id=?1",
+                    params![repo_id],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                )
+                .unwrap();
+            assert!(size_bytes > 0);
+            assert!(line_count > 0);
+            let fts_count: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM doc_fts WHERE rowid=(SELECT rowid FROM doc WHERE id=?1)",
+                    params![doc_id.clone()],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(fts_count, 1);
+            let version_count: i64 = conn
+                .query_row("SELECT COUNT(*) FROM doc_version WHERE doc_id=?1", params![doc_id.clone()], |r| r.get(0))
+                .unwrap_or(0);
+            assert_eq!(version_count, 1);
+            let provenance_count: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM provenance WHERE entity_id=?1 AND source='import'",
+                    params![doc_id.clone()],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(provenance_count, 1);
+        }
+    }
+
+    fn import_row(body: &str, message: &str) -> DocImportRow {
+        DocImportRow {
+            id: None,
+            repo_id: None,
+            slug: "guide".into(),
+            title: Some("Guide".into()),
+            body: Some(body.to_string()),
+            is_deleted: Some(false),
+            updated_at: None,
+            versions: Some(vec![DocVersionImport {
+                id: None,
+                hash: None,
+                created_at: None,
+                message: Some(message.to_string()),
+            }]),
+        }
+    }
+
+    #[test]
+    fn import_docs_respects_merge_strategy() {
+        let db = test_db();
+        {
+            let conn = db.0.lock();
+            insert_doc(&conn, "repo_merge", "guide", "Guide", "old body", false);
+        }
+        {
+            let conn = db.0.lock();
+            let summary = import_docs_apply(
+                &conn,
+                vec![import_row("new body", "keep")],
+                Some("repo_merge".into()),
+                None,
+                false,
+                "keep",
+                "import.json",
+            )
+            .unwrap();
+            assert_eq!(summary["skipped"].as_u64().unwrap(), 1);
+            let body: String = conn
+                .query_row(
+                    "SELECT f.body FROM doc_fts f JOIN doc d ON d.rowid=f.rowid WHERE d.repo_id=?1 AND d.slug='guide'",
+                    params!["repo_merge"],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert!(body.contains("old body"));
+        }
+        {
+            let conn = db.0.lock();
+            let summary = import_docs_apply(
+                &conn,
+                vec![import_row("## updated guide", "overwrite")],
+                Some("repo_merge".into()),
+                None,
+                false,
+                "overwrite",
+                "import.json",
+            )
+            .unwrap();
+            assert_eq!(summary["updated"].as_u64().unwrap(), 1);
+            let body: String = conn
+                .query_row(
+                    "SELECT f.body FROM doc_fts f JOIN doc d ON d.rowid=f.rowid WHERE d.repo_id=?1 AND d.slug='guide'",
+                    params!["repo_merge"],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert!(body.contains("## updated guide"));
+            let version_count: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM doc_version WHERE doc_id=(SELECT id FROM doc WHERE repo_id=?1 AND slug='guide')",
+                    params!["repo_merge"],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert!(version_count >= 1);
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn repos_remove(id_or_name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let conn = db.0.lock();
@@ -642,6 +821,304 @@ fn read_docs_from_path(path: &Path) -> Result<Vec<DocImportRow>, String> {
     }
 }
 
+fn import_docs_apply(
+    conn: &Connection,
+    docs: Vec<DocImportRow>,
+    repo_id: Option<String>,
+    new_repo_name: Option<String>,
+    dry_run: bool,
+    merge_strategy: &str,
+    path: &str,
+) -> Result<serde_json::Value, String> {
+    if docs.is_empty() {
+        return Ok(serde_json::json!({
+            "path": path,
+            "doc_count": 0,
+            "inserted": 0,
+            "updated": 0,
+            "skipped": 0,
+            "dry_run": dry_run,
+            "merge_strategy": merge_strategy,
+            "status": if dry_run { "dry_run" } else { "imported" },
+        }));
+    }
+    if merge_strategy != "keep" && merge_strategy != "overwrite" {
+        return Err("merge_strategy must be keep or overwrite".into());
+    }
+
+    if repo_id.is_none() && new_repo_name.is_none() {
+        return Err("specify repo_id or new_repo_name".into());
+    }
+
+    let doc_count = docs.len();
+    if dry_run {
+        let (target_repo, _) = resolve_repo_for_import(conn, repo_id.clone(), new_repo_name.clone(), true)?;
+        let stats = simulate_import(conn, &docs, &target_repo, merge_strategy, repo_id.is_none())?;
+        return Ok(serde_json::json!({
+            "path": path,
+            "doc_count": doc_count,
+            "repo_id": target_repo,
+            "dry_run": true,
+            "merge_strategy": merge_strategy,
+            "inserted": stats.inserted,
+            "updated": stats.updated,
+            "skipped": stats.skipped,
+            "status": "dry_run",
+        }));
+    }
+
+    let (target_repo, created_repo) = resolve_repo_for_import(conn, repo_id.clone(), new_repo_name.clone(), false)?;
+    let folder_id = ensure_root_folder(conn, &target_repo)?;
+    let mut stats = ImportStats::default();
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    for doc in docs {
+        import_doc_record(&tx, &target_repo, &folder_id, doc, merge_strategy, &mut stats, path)?;
+    }
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "path": path,
+        "doc_count": doc_count,
+        "repo_id": target_repo,
+        "created_repo": created_repo,
+        "dry_run": false,
+        "merge_strategy": merge_strategy,
+        "inserted": stats.inserted,
+        "updated": stats.updated,
+        "skipped": stats.skipped,
+        "status": "imported",
+    }))
+}
+
+fn simulate_import(conn: &Connection, docs: &[DocImportRow], repo_id: &str, merge_strategy: &str, repo_is_new: bool) -> Result<ImportStats, String> {
+    let mut stats = ImportStats::default();
+    if repo_is_new {
+        stats.inserted = docs.len() as u32;
+        return Ok(stats);
+    }
+    for doc in docs {
+        let slug = doc.slug.trim();
+        if slug.is_empty() {
+            return Err("doc slug is required".into());
+        }
+        let exists: Option<String> = conn
+            .query_row(
+                "SELECT id FROM doc WHERE repo_id=?1 AND slug=?2",
+                params![repo_id, slug],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(|e| e.to_string())?;
+        match exists {
+            Some(_) => {
+                if merge_strategy == "keep" {
+                    stats.skipped += 1;
+                } else {
+                    stats.updated += 1;
+                }
+            }
+            None => stats.inserted += 1,
+        }
+    }
+    Ok(stats)
+}
+
+fn import_doc_record(
+    conn: &Connection,
+    repo_id: &str,
+    folder_id: &str,
+    mut doc: DocImportRow,
+    merge_strategy: &str,
+    stats: &mut ImportStats,
+    import_path: &str,
+) -> Result<(), String> {
+    let slug = doc.slug.trim().to_string();
+    if slug.is_empty() {
+        return Err("doc slug is required".into());
+    }
+    let body = doc.body.take().ok_or_else(|| format!("doc {slug} missing body"))?;
+    let title = doc.title.take().unwrap_or_else(|| slug.clone());
+    let is_deleted = doc.is_deleted.unwrap_or(false);
+    let message = doc
+        .versions
+        .as_ref()
+        .and_then(|v| v.last())
+        .and_then(|v| v.message.clone());
+
+    let existing: Option<String> = conn
+        .query_row(
+            "SELECT id FROM doc WHERE repo_id=?1 AND slug=?2",
+            params![repo_id, slug.clone()],
+            |r| r.get(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    match existing {
+        Some(doc_id) => {
+            if merge_strategy == "keep" {
+                stats.skipped += 1;
+                return Ok(());
+            }
+            update_doc_record(conn, &doc_id, repo_id, &slug, &title, &body, is_deleted, message.as_deref(), import_path)?;
+            stats.updated += 1;
+        }
+        None => {
+            let doc_id = doc.id.unwrap_or_else(|| Uuid::new_v4().to_string());
+            insert_doc_record(conn, &doc_id, repo_id, folder_id, &slug, &title, &body, is_deleted, message.as_deref(), import_path)?;
+            stats.inserted += 1;
+        }
+    }
+    Ok(())
+}
+
+fn insert_doc_record(
+    conn: &Connection,
+    doc_id: &str,
+    repo_id: &str,
+    folder_id: &str,
+    slug: &str,
+    title: &str,
+    body: &str,
+    is_deleted: bool,
+    message: Option<&str>,
+    import_path: &str,
+) -> Result<(), String> {
+    let size_bytes = body.len() as i64;
+    let line_count = body.lines().count() as i64;
+    conn.execute(
+        "INSERT INTO doc(id,repo_id,folder_id,slug,title,is_deleted,size_bytes,line_count,created_at,updated_at) VALUES(?,?,?,?,?,?,?, ?,datetime('now'),datetime('now'))",
+        params![doc_id, repo_id, folder_id, slug, title, if is_deleted { 1 } else { 0 }, size_bytes, line_count],
+    )
+    .map_err(|e| e.to_string())?;
+    write_doc_version(conn, doc_id, body, message)?;
+    refresh_doc_fts(conn, doc_id, title, body, slug, repo_id)?;
+    crate::graph::update_links_for_doc(conn, doc_id, body)?;
+    record_import_provenance(conn, doc_id, import_path)?;
+    Ok(())
+}
+
+fn update_doc_record(
+    conn: &Connection,
+    doc_id: &str,
+    repo_id: &str,
+    slug: &str,
+    title: &str,
+    body: &str,
+    is_deleted: bool,
+    message: Option<&str>,
+    import_path: &str,
+) -> Result<(), String> {
+    let size_bytes = body.len() as i64;
+    let line_count = body.lines().count() as i64;
+    conn.execute(
+        "UPDATE doc SET title=?1, is_deleted=?2, size_bytes=?3, line_count=?4, updated_at=datetime('now') WHERE id=?5",
+        params![title, if is_deleted { 1 } else { 0 }, size_bytes, line_count, doc_id],
+    )
+    .map_err(|e| e.to_string())?;
+    write_doc_version(conn, doc_id, body, message)?;
+    refresh_doc_fts(conn, doc_id, title, body, slug, repo_id)?;
+    crate::graph::update_links_for_doc(conn, doc_id, body)?;
+    record_import_provenance(conn, doc_id, import_path)?;
+    Ok(())
+}
+
+fn write_doc_version(conn: &Connection, doc_id: &str, body: &str, message: Option<&str>) -> Result<(), String> {
+    let blob_id = Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO doc_blob(id,content,size_bytes) VALUES(?,?,?)",
+        params![blob_id, body.as_bytes(), body.len() as i64],
+    )
+    .map_err(|e| e.to_string())?;
+    let hash = blake3::hash(body.as_bytes()).to_hex().to_string();
+    let version_id = Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO doc_version(id,doc_id,blob_id,hash,message,created_at) VALUES(?,?,?,?,?,datetime('now'))",
+        params![version_id, doc_id, blob_id, format!("{doc_id}:{hash}"), message.unwrap_or("")],
+    )
+    .map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE doc SET current_version_id=?1 WHERE id=?2",
+        params![version_id, doc_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn refresh_doc_fts(conn: &Connection, doc_id: &str, title: &str, body: &str, slug: &str, repo_id: &str) -> Result<(), String> {
+    conn.execute(
+        "INSERT INTO doc_fts(doc_fts,rowid) VALUES('delete',(SELECT rowid FROM doc WHERE id=?1))",
+        params![doc_id],
+    )
+    .ok();
+    conn.execute(
+        "INSERT INTO doc_fts(rowid,title,body,slug,repo_id) SELECT d.rowid,?2,?3,?4,?5 FROM doc d WHERE d.id=?1",
+        params![doc_id, title, body, slug, repo_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn record_import_provenance(conn: &Connection, doc_id: &str, path: &str) -> Result<(), String> {
+    let meta = serde_json::json!({ "path": path });
+    conn.execute(
+        "INSERT INTO provenance(id,entity_type,entity_id,source,meta,created_at) VALUES(?,?,?,?,?,datetime('now'))",
+        params![Uuid::new_v4().to_string(), "doc", doc_id, "import", meta.to_string()],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn ensure_root_folder(conn: &Connection, repo_id: &str) -> Result<String, String> {
+    let existing: Option<String> = conn
+        .query_row(
+            "SELECT id FROM folder WHERE repo_id=?1 ORDER BY created_at LIMIT 1",
+            params![repo_id],
+            |r| r.get(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+    if let Some(id) = existing {
+        return Ok(id);
+    }
+    let folder_id = Uuid::new_v4().to_string();
+    let path = format!("/{repo_id}");
+    let slug = format!("root-{repo_id}");
+    conn.execute(
+        "INSERT INTO folder(id,repo_id,parent_id,path,slug,created_at,updated_at) VALUES(?1,?2,NULL,?3,?4,datetime('now'),datetime('now'))",
+        params![folder_id, repo_id, path, slug],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(folder_id)
+}
+
+fn resolve_repo_for_import(conn: &Connection, repo_id: Option<String>, new_repo_name: Option<String>, dry_run: bool) -> Result<(String, bool), String> {
+    if let Some(id) = repo_id {
+        let exists: Option<String> = conn
+            .query_row("SELECT id FROM repo WHERE id=?1", params![&id], |r| r.get(0))
+            .optional()
+            .map_err(|e| e.to_string())?;
+        if exists.is_none() {
+            return Err("repo not found".into());
+        }
+        return Ok((id, false));
+    }
+    if let Some(name) = new_repo_name {
+        if dry_run {
+            return Ok((format!("pending:{}", name.replace(' ', "-")), true));
+        }
+        let repo_id = Uuid::new_v4().to_string();
+        let path = format!(".import/{}", name.replace(' ', "-"));
+        conn.execute(
+            "INSERT INTO repo(id,name,path,settings,created_at,updated_at) VALUES(?,?,?,json('{}'),datetime('now'),datetime('now'))",
+            params![repo_id, name, path],
+        )
+        .map_err(|e| e.to_string())?;
+        ensure_root_folder(conn, &repo_id)?;
+        return Ok((repo_id, true));
+    }
+    Err("specify repo_id or new_repo_name".into())
+}
+
 #[tauri::command]
 pub async fn export_db(out_path: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let dest = PathBuf::from(out_path);
@@ -672,22 +1149,28 @@ pub struct ImportDocsPayload {
     pub merge_strategy: Option<String>,
 }
 
-#[tauri::command]
-pub async fn import_docs(payload: ImportDocsPayload) -> Result<serde_json::Value, String> {
-    if payload.repo_id.is_some() && payload.new_repo_name.is_some() {
+#[derive(Default)]
+struct ImportStats {
+    inserted: u32,
+    updated: u32,
+    skipped: u32,
+}
+
+pub fn import_docs_exec(db: &std::sync::Arc<Db>, payload: ImportDocsPayload) -> Result<serde_json::Value, String> {
+    let ImportDocsPayload { path, repo_id, new_repo_name, dry_run, merge_strategy } = payload;
+    if repo_id.is_some() && new_repo_name.is_some() {
         return Err("repo_id and new_repo_name are mutually exclusive".into());
     }
-    let docs = read_docs_from_path(Path::new(&payload.path))?;
-    let summary = serde_json::json!({
-        "path": payload.path,
-        "doc_count": docs.len(),
-        "repo_id": payload.repo_id,
-        "new_repo_name": payload.new_repo_name,
-        "dry_run": payload.dry_run.unwrap_or(true),
-        "merge_strategy": payload.merge_strategy.unwrap_or_else(|| "keep".to_string()),
-        "status": "dry_run_only",
-    });
-    Ok(summary)
+    let docs = read_docs_from_path(Path::new(&path))?;
+    let dry_run = dry_run.unwrap_or(true);
+    let merge_strategy = merge_strategy.unwrap_or_else(|| "keep".to_string());
+    let conn = db.0.lock();
+    import_docs_apply(&conn, docs, repo_id, new_repo_name, dry_run, &merge_strategy, &path)
+}
+
+#[tauri::command]
+pub async fn import_docs(payload: ImportDocsPayload, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    import_docs_exec(db.inner(), payload)
 }
 
 #[derive(Serialize)]

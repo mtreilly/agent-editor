@@ -53,6 +53,7 @@ Completed
 - Plugins: restart policy + prefixed stderr/stdout logging; watchdog timeout via `PLUGIN_CALL_TIMEOUT_MS`; unit test using slow-core.
 - Scripts: `tmux:plugin-log-smoke` to exercise logging and restart; packaging guide added with CI matrix.
 - CLI Export: `agent-editor export docs` (`--format json|jsonl|tar`, tar/jsonl require `--out`, tar auto-includes `--include-versions`) + `agent-editor export db`; Go tar tests cover archive layout.
+- CLI Import: `agent-editor import docs` now parses json/jsonl/tar archives, supports dry-run, merge strategies, repo creation, provenance, and round-trip tests to keep versions/FTS/link data consistent.
 - CLI Reliability: CLI source now imports using module path so `go test ./cli/...` runs (fixes ai command braces and tar export tests).
 
 Bench targets (current phase)
@@ -73,4 +74,4 @@ Next Phase: M4 Packaging + CI
 Notes
 - Tauri build requires a valid RGBA icon at `src-tauri/icons/icon.png` for packaging.
  - Approve SWC/esbuild builds with `pnpm approve-builds` if prompted.
-- Import CLI: stubbed `agent-editor import docs` command + `import_docs` RPC returning placeholder; manual added for archive format.
+- Import CLI: now live; attachments/binary blobs will follow once doc blob storage supports non-Markdown payloads.
