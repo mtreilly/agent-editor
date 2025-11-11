@@ -130,6 +130,7 @@ logging:
   - Progress: `pnpm vibe:progress`
   - Done: `pnpm vibe:done`
 - Headless CI/agent usage: set `HEADLESS=1` to skip `tmux attach` when supported by the script.
+- Convention: each long-lived service (sidecar, web, logs) uses its own window; ephemeral commands (builds, tests) run in a split pane within a dedicated window.
 
 ### Testing
 - Unit tests: `*.test.ts(x)` files alongside implementation
