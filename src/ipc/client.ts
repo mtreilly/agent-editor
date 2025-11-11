@@ -52,6 +52,10 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
       return [] as any as T
     case 'anchors_delete':
       return { deleted: true } as any as T
+    case 'ai_run': {
+      const provider = (args?.provider === 'default') ? 'openrouter' : (args?.provider || 'local')
+      return { trace_id: 'stub-trace', text: `[${provider}]\nPrompt: ${args?.prompt || ''}`, provider, model: provider === 'openrouter' ? 'openrouter/auto' : '' } as any as T
+    }
     default:
       throw new Error(`Not in Tauri environment: ${cmd}`)
   }
