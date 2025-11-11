@@ -477,7 +477,19 @@ pub async fn plugins_shutdown_core(name: String) -> Result<serde_json::Value, St
 }
 
 #[tauri::command]
-pub async fn plugins_call_core(name: String, line: String) -> Result<serde_json::Value, String> {
+pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    // Capability gate: plugin must be enabled and have permissions.core.call=true
+    {
+        let conn = db.0.lock();
+        let allowed: i64 = conn
+            .query_row(
+                "SELECT CASE WHEN enabled=1 AND COALESCE(json_extract(permissions,'$.core.call'),0)=1 THEN 1 ELSE 0 END FROM plugin WHERE name=?1",
+                params![name],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
+        if allowed == 0 { return Err("forbidden".into()); }
+    }
     static REG: OnceLock<Mutex<HashMap<String, CoreProc>>> = OnceLock::new();
     let reg = REG.get_or_init(|| Mutex::new(HashMap::new()));
     let mut map = reg.lock().map_err(|_| "lock_poison")?;

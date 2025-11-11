@@ -528,6 +528,7 @@ export const wikiInputRule = $inputRule(/\[\[([^\]]+)\]\]$/, (state, match, star
   - db.query (read-only or write)
   - ai.invoke (provider subset)
   - scanner.register(globs)
+  - core.call (allow core plugin to receive call-core messages)
 - Message bus (JSON-RPC 2.0):
 ```ts
 // src/plugins/api.ts

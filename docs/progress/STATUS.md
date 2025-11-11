@@ -34,7 +34,8 @@ Completed
 - Plugins (UI/Core): minimal UI host to load Hello World plugin at /plugins and run a command; Core host scaffold in Rust
 - Command Palette: Ctrl/Cmd+K palette uses plugin contributions; i18n and ARIA polish
 - Providers: API key set/get stub via provider.config (to be replaced with OS keychain in M3)
- - Core plugins: spawn/stop RPC endpoints scaffolded (not implemented) and CLI wiring added
+- Core plugins: spawn/stop RPC endpoints scaffolded (not implemented) and CLI wiring added
+ - Capability gate: call-core requires plugin.enabled=1 and permissions.core.call=true
 
 Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset
