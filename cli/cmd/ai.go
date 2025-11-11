@@ -59,7 +59,23 @@ func aiCmd() *cobra.Command {
         if err := cli.Call(ctx, "ai_provider_test", map[string]interface{}{"name": args[0], "prompt": "hello"}, &res); err != nil { return err }
         return output.Print(res, cfg.OutputFormat)
     }}
-    providers.AddCommand(providersList, providersEnable, providersDisable, providersTest)
+    // keys subcommands
+    keys := &cobra.Command{Use: "key", Short: "Manage provider API keys"}
+    keySet := &cobra.Command{Use: "set <name> <key>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load(); cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background(); var res map[string]interface{}
+        if err := cli.Call(ctx, "ai_provider_key_set", map[string]interface{}{"name": args[0], "key": args[1]}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+    keyHas := &cobra.Command{Use: "has <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+        cfg := config.Load(); cli := rpc.New(cfg.ServerURL, cfg.APIToken, cfg.Timeout)
+        ctx := context.Background(); var res map[string]interface{}
+        if err := cli.Call(ctx, "ai_provider_key_get", map[string]interface{}{"name": args[0]}, &res); err != nil { return err }
+        return output.Print(res, cfg.OutputFormat)
+    }}
+    keys.AddCommand(keySet, keyHas)
+
+    providers.AddCommand(providersList, providersEnable, providersDisable, providersTest, keys)
 
     traces := &cobra.Command{Use: "traces", Short: "AI traces"}
     tracesList := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return output.Print("not implemented", "text") }}

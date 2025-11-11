@@ -289,6 +289,7 @@ pnpm preview                      # Preview production build
   - `pnpm tmux:plugin-rpc-demo` — demonstrates call-core capability gate (forbidden until fs.read allowed), then successful JSON-RPC fs.read via echo-core
   - `pnpm tmux:plugin-net-demo` — demonstrates net.request domain allowlist enforcement (forbidden until example.com allowed), then successful JSON-RPC net.request
   - `pnpm tmux:plugin-db-demo` — demonstrates db.query permission gate (forbidden until db.query allowed), then successful JSON-RPC db.query
+  - `pnpm tmux:provider-demo` — demonstrates enabling a remote provider (openrouter), setting API key, setting global default, and running AI (default vs explicit)
 
 ## Notifications (Mandatory)
 - Always send a Discord message via vibe CLI when you start, periodically during work, and when you finish:
