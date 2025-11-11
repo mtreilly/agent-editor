@@ -46,7 +46,12 @@ Completed
 - Docs: Added CODEMAP, PLUGINS, PROVIDERS, RPC, DATA_MODEL, DEVELOPMENT, CI, CONFIG, TROUBLESHOOTING, ROUTING, SCANNER, TESTING; README updated with links; IPC stubs manual.
  - Docs: Added CODEMAP, PLUGINS, PROVIDERS, RPC, DATA_MODEL, DEVELOPMENT, CI, CONFIG, TROUBLESHOOTING, ROUTING, SCANNER, TESTING; README updated with links; IPC stubs manual.
 - Docs polish (M3): Enforced Vibe Discord notifications (start/progress/done) in AGENTS.md and added `guides/VIBE_NOTIFICATIONS.md`; scripts guide updated with headless fallback.
- - CI/perf: `ci:bench` now asserts scan throughput (docs/sec) from `bench-scan.sh`; configurable via `SCAN_DOCS_PER_SEC_MIN`.
+- CI/perf: `ci:bench` now asserts scan throughput (docs/sec) from `bench-scan.sh`; configurable via `SCAN_DOCS_PER_SEC_MIN`.
+ - A11y polish: added aria-describedby/title hints on providers inputs; AI output region uses role=status + aria-live; repo scan progress uses aria-live.
+ - E2E: providers hints and doc AI disabled describedby tested via Playwright.
+ - CLI: `plugin events tail` to stream plugin-prefixed lines; docs updated.
+ - Plugins: restart policy + prefixed stderr/stdout logging; watchdog timeout via `PLUGIN_CALL_TIMEOUT_MS`; unit test using slow-core.
+ - Scripts: `tmux:plugin-log-smoke` to exercise logging and restart; packaging guide added with CI matrix.
 
 Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset

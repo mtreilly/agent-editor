@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import * as api from '../ipc-bridge'
+import { Hint } from '../features/providers/Hint'
 import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/settings/providers')({
@@ -145,9 +146,9 @@ function ProvidersSettings() {
                     <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!keys[p.name]?.value} title={!keys[p.name]?.value ? (t('hint.setKey') as string) : undefined} onClick={() => saveKey(p.name)}>{t('button.save')}</button>
                     <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!allowed} title={!allowed ? (t('hint.enableProvider') as string) : undefined} onClick={() => testProvider(p.name)}>{t('button.test') || 'Test'}</button>
                     {keys[p.name]?.has && <span className="text-xs text-gray-600">{t('label.keySet')}</span>}
-                    <span id={`hint-${p.name}-apikey`} className="text-xs text-gray-600">
+                    <Hint id={`hint-${p.name}-apikey`}>
                       {t('hint.setKeyHelp', { defaultValue: 'Enter API key; stored via keychain when available.' })}
-                    </span>
+                    </Hint>
                   </div>
                 )}
                 {p.name === 'openrouter' && (
@@ -162,9 +163,9 @@ function ProvidersSettings() {
                       onChange={(e) => setModels((prev) => ({ ...prev, [p.name]: e.target.value }))}
                     />
                     <button className="px-2 py-1 border rounded disabled:opacity-50" disabled={!allowed} title={!allowed ? (t('hint.enableProvider') as string) : undefined} onClick={() => saveModel(p.name)}>{t('button.saveModel', { defaultValue: 'Save Model' })}</button>
-                    <span id={`hint-${p.name}-model`} className="text-xs text-gray-600">
+                    <Hint id={`hint-${p.name}-model`}>
                       {t('hint.modelHelp', { defaultValue: 'Set default model for this provider (e.g., openrouter/auto).' })}
-                    </span>
+                    </Hint>
                   </div>
                 )}
               </td>
