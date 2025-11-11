@@ -1,12 +1,14 @@
 package cmd
 
 import (
+    "archive/tar"
     "bufio"
     "context"
     "encoding/json"
     "fmt"
     "os"
     "strings"
+    "time"
 
     "agent-editor/cli/internal/config"
     "agent-editor/cli/internal/output"
@@ -24,8 +26,10 @@ func exportCmd() *cobra.Command {
         format, _ := cmd.Flags().GetString("format")
         format = strings.ToLower(format)
         if format == "" { format = "json" }
-        if format != "json" && format != "jsonl" {
-            return fmt.Errorf("invalid --format %s (expected json|jsonl)", format)
+        switch format {
+        case "json", "jsonl", "tar":
+        default:
+            return fmt.Errorf("invalid --format %s (expected json|jsonl|tar)", format)
         }
 
         cfg := config.Load()
@@ -58,6 +62,8 @@ func exportCmd() *cobra.Command {
                     if _, err := w.Write(append(line, '\n')); err != nil { return err }
                 }
                 if err := w.Flush(); err != nil { return err }
+            case "tar":
+                if err := writeDocsTar(outFile, res); err != nil { return err }
             }
             return output.Print(fmt.Sprintf("exported %d docs to %s (%s)", len(res), outFile, format), cfg.OutputFormat)
         }
@@ -65,8 +71,8 @@ func exportCmd() *cobra.Command {
     }}
     docs.Flags().String("repo", "", "Repo ID to filter (default: all repos)")
     docs.Flags().Bool("include-deleted", false, "Include docs marked as deleted")
-    docs.Flags().String("out", "", "Write JSON export to file")
-    docs.Flags().String("format", "json", "Output format when using --out (json|jsonl)")
+    docs.Flags().String("out", "", "Write export to file (required for jsonl/tar)")
+    docs.Flags().String("format", "json", "Output format when using --out (json|jsonl|tar)")
 
     db := &cobra.Command{Use: "db", RunE: func(cmd *cobra.Command, args []string) error {
         outFile, _ := cmd.Flags().GetString("out")
@@ -82,4 +88,29 @@ func exportCmd() *cobra.Command {
 
     export.AddCommand(docs, db)
     return export
+}
+
+func writeDocsTar(out string, docs []map[string]interface{}) error {
+    f, err := os.Create(out)
+    if err != nil { return err }
+    defer f.Close()
+    tw := tar.NewWriter(f)
+    defer tw.Close()
+
+    docsJSON, err := json.MarshalIndent(docs, "", "  ")
+    if err != nil { return err }
+    if err := tw.WriteHeader(&tar.Header{Name: "docs.json", Mode: 0o600, Size: int64(len(docsJSON))}); err != nil { return err }
+    if _, err := tw.Write(docsJSON); err != nil { return err }
+
+    meta := map[string]interface{}{
+        "created_at": time.Now().UTC().Format(time.RFC3339),
+        "doc_count": len(docs),
+        "format": "json",
+        "version": "1",
+    }
+    metaJSON, err := json.MarshalIndent(meta, "", "  ")
+    if err != nil { return err }
+    if err := tw.WriteHeader(&tar.Header{Name: "meta.json", Mode: 0o600, Size: int64(len(metaJSON))}); err != nil { return err }
+    if _, err := tw.Write(metaJSON); err != nil { return err }
+    return nil
 }

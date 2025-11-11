@@ -23,5 +23,5 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 - Next: extend export formats (jsonl, tar) and include attachments when ready.
 
 ## 2025-11-11 — Export formats
-- `agent-editor export docs --format jsonl --out docs.jsonl` writes newline-delimited JSON for streaming pipelines; default remains pretty JSON.
-- Follow-up: tarball packaging (docs + metadata) when attachments/versions export lands.
+- `agent-editor export docs --format jsonl --out docs.jsonl` writes newline-delimited JSON for streaming pipelines.
+- `agent-editor export docs --format tar --out docs.tar` builds a tarball containing `docs.json` + `meta.json`; attachments TODO.
