@@ -19,10 +19,13 @@
     "tmux:smoke": "bash scripts/tmux-smoke.sh",
     "tmux:e2e": "bash scripts/tmux-e2e.sh",
     "tmux:bench": "bash scripts/tmux-bench.sh",
+    "tmux:bootstrap": "bash scripts/tmux-bootstrap.sh",
     "bench:fts": "bash scripts/bench-fts.sh the 50",
     "bench:scan": "bash scripts/bench-scan.sh"
   },
   "dependencies": {
+    "i18next": "^23.10.1",
+    "react-i18next": "^15.0.2",
     "@milkdown/core": "^7.17.1",
     "@milkdown/plugin-listener": "^7.17.1",
     "@milkdown/preset-gfm": "^7.17.1",

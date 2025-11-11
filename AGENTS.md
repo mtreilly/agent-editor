@@ -283,6 +283,7 @@ pnpm preview                      # Preview production build
   - `pnpm tmux:smoke` — sidecar + CLI smoke
   - `pnpm tmux:bench` — sidecar + FTS and scan benchmarks in dedicated panes
   - `pnpm tmux:e2e` — web dev server + Playwright tests
+  - `pnpm tmux:bootstrap` — installs deps (pnpm), runs cargo check and CLI build in panes
 - If tmux is unavailable, install it or run an equivalent multi‑pane terminal.
 
 ## Multi-Agent Collaboration

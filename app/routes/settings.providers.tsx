@@ -8,7 +8,7 @@ export const Route = createFileRoute('/settings/providers')({
 })
 
 function ProvidersSettings() {
-  const { t } = useTranslation('settings')
+  const { t } = useTranslation(['settings','common'])
   const [providers, setProviders] = React.useState<api.Provider[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -57,7 +57,7 @@ function ProvidersSettings() {
             <tr key={p.name} className="border-b">
               <td className="py-2 pr-2 font-mono">{p.name}</td>
               <td className="py-2 pr-2">{p.kind}</td>
-              <td className="py-2 pr-2">{p.enabled ? 'Yes' : 'No'}</td>
+              <td className="py-2 pr-2">{p.enabled ? t('yes', { ns: 'common' }) : t('no', { ns: 'common' })}</td>
               <td className="py-2">
                 <button
                   className="px-2 py-1 border rounded"
