@@ -66,6 +66,18 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
       const provider = (args?.provider === 'default') ? 'openrouter' : (args?.provider || 'local')
       return { trace_id: 'stub-trace', text: `[${provider}]\nPrompt: ${args?.prompt || ''}`, provider, model: provider === 'openrouter' ? 'openrouter/auto' : '' } as any as T
     }
+    case 'export_docs':
+      return [
+        {
+          id: 'doc-1',
+          repo_id: 'r1',
+          slug: 'welcome',
+          title: 'Welcome',
+          body: '# Welcome',
+          updated_at: new Date().toISOString(),
+          is_deleted: false,
+        },
+      ] as any as T
     case 'plugins_core_list':
       return [] as any as T
     default:

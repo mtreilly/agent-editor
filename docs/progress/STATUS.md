@@ -50,8 +50,9 @@ Completed
  - A11y polish: added aria-describedby/title hints on providers inputs; AI output region uses role=status + aria-live; repo scan progress uses aria-live.
  - E2E: providers hints and doc AI disabled describedby tested via Playwright.
  - CLI: `plugin events tail` to stream plugin-prefixed lines; docs updated.
- - Plugins: restart policy + prefixed stderr/stdout logging; watchdog timeout via `PLUGIN_CALL_TIMEOUT_MS`; unit test using slow-core.
- - Scripts: `tmux:plugin-log-smoke` to exercise logging and restart; packaging guide added with CI matrix.
+- Plugins: restart policy + prefixed stderr/stdout logging; watchdog timeout via `PLUGIN_CALL_TIMEOUT_MS`; unit test using slow-core.
+- Scripts: `tmux:plugin-log-smoke` to exercise logging and restart; packaging guide added with CI matrix.
+- CLI Export: `agent-editor export docs` calls new `export_docs` RPC with repo filter/include-deleted and optional file output; db export remains TODO.
 
 Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset

@@ -392,6 +392,75 @@ pub async fn docs_delete(doc_id: String, db: State<'_, std::sync::Arc<Db>>) -> R
 }
 
 #[derive(Serialize)]
+pub struct DocExportRow {
+    pub id: String,
+    pub repo_id: String,
+    pub slug: String,
+    pub title: String,
+    pub body: String,
+    pub updated_at: String,
+    pub is_deleted: bool,
+}
+
+fn export_docs_sql(include_deleted: bool, with_repo: bool) -> String {
+    let mut sql = String::from(
+        "SELECT d.id, d.repo_id, d.slug, d.title, COALESCE(fts.body,'') as body, d.updated_at, d.is_deleted \
+         FROM doc d JOIN doc_fts fts ON fts.rowid = d.rowid WHERE 1=1",
+    );
+    if !include_deleted {
+        sql.push_str(" AND d.is_deleted=0");
+    }
+    if with_repo {
+        sql.push_str(" AND d.repo_id=?1");
+    }
+    sql.push_str(" ORDER BY d.updated_at DESC");
+    sql
+}
+
+#[tauri::command]
+pub async fn export_docs(repo_id: Option<String>, include_deleted: Option<bool>, db: State<'_, std::sync::Arc<Db>>) -> Result<Vec<DocExportRow>, String> {
+    let include_deleted = include_deleted.unwrap_or(false);
+    let conn = db.0.lock();
+    let mut out = Vec::new();
+    if let Some(repo) = repo_id {
+        let sql = export_docs_sql(include_deleted, true);
+        let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(params![repo], |r| {
+                Ok(DocExportRow {
+                    id: r.get(0)?,
+                    repo_id: r.get(1)?,
+                    slug: r.get(2)?,
+                    title: r.get(3)?,
+                    body: r.get(4)?,
+                    updated_at: r.get(5)?,
+                    is_deleted: r.get::<_, i64>(6)? != 0,
+                })
+            })
+            .map_err(|e| e.to_string())?;
+        for row in rows { out.push(row.map_err(|e| e.to_string())?) }
+    } else {
+        let sql = export_docs_sql(include_deleted, false);
+        let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(DocExportRow {
+                    id: r.get(0)?,
+                    repo_id: r.get(1)?,
+                    slug: r.get(2)?,
+                    title: r.get(3)?,
+                    body: r.get(4)?,
+                    updated_at: r.get(5)?,
+                    is_deleted: r.get::<_, i64>(6)? != 0,
+                })
+            })
+            .map_err(|e| e.to_string())?;
+        for row in rows { out.push(row.map_err(|e| e.to_string())?) }
+    }
+    Ok(out)
+}
+
+#[derive(Serialize)]
 pub struct SearchHit { pub id: String, pub slug: String, pub title_snip: String, pub body_snip: String, pub rank: f64 }
 
 #[tauri::command]

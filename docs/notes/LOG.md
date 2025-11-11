@@ -13,3 +13,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — CI/perf benches
 - ci:bench includes scan docs/sec assertions alongside FTS p95/p99/avg.
 - Consider adding synthetic mixed-repo profile and environment-tuned thresholds.
+
+## 2025-11-11 — Export docs
+- Implemented `export_docs` RPC + CLI `agent-editor export docs` with repo filter, include-deleted flag, optional file output.
+- Follow-up: implement `export db` (copy sqlite db) and support jsonl/tar formats per CLI plan.

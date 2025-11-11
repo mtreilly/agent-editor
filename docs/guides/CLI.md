@@ -46,9 +46,10 @@ agent-editor plugin stop-core echo
 agent-editor plugin events tail --file .sidecar.log --follow      # plugin-prefixed lines
 agent-editor plugin events tail --all --from-beginning            # all lines, from start
 
-# Export (stubs)
-agent-editor export docs   # stub
-agent-editor export db     # stub
+# Export
+agent-editor export docs --repo r1 --out docs.json
+agent-editor export docs --include-deleted -o json
+agent-editor export db   # stub (pending)
 ```
 
 ## Transport

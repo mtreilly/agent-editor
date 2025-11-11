@@ -12,6 +12,9 @@ src-tauri/.dev/
 src-tauri/target/
 src-tauri/.cargo/
 
+# Beads issue tracker artifacts
+.beads/
+
 # OS
 .DS_Store
 Thumbs.db
