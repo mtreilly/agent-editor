@@ -819,6 +819,14 @@ Enforcement
 - Plugin sandbox: deny-by-default; explicit capability grants; per-plugin FS chroot to repo or cache; network domain allowlist.
 - Secrets scanning and redaction before AI calls; logs redact by default.
 
+### Provider Key Storage
+- Primary: OS keychain via keyring crate (feature `keyring`). Keys never persisted in SQLite.
+- Fallback (no keyring): store a `key_set` boolean in `provider.config` (no secret material stored) and read key from environment when invoking provider.
+- IPC:
+  - `ai_provider_key_set(name, key)` — writes to keychain (or sets `key_set=1`)
+  - `ai_provider_key_get(name)` — returns `{ has_key: boolean }` only
+  - Future: `ai_provider_key_clear(name)` to remove key
+
 ## Phase Checkpoints
 
 M1 Core DB + Scanner + FTS — COMPLETE

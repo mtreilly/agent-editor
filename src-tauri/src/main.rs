@@ -5,6 +5,7 @@ mod commands;
 mod api;
 mod scan;
 mod graph;
+mod secrets;
 
 use std::path::PathBuf;
 use tauri::Manager;

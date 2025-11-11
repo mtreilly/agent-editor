@@ -34,6 +34,7 @@ Completed
 - Plugins (UI/Core): minimal UI host to load Hello World plugin at /plugins and run a command; Core host scaffold in Rust
 - Command Palette: Ctrl/Cmd+K palette uses plugin contributions; i18n and ARIA polish
 - Providers: API key set/get stub via provider.config (to be replaced with OS keychain in M3)
+ - Provider keys: keychain-ready facade added (`secrets.rs`), with keyring feature path and DB fallback storing only `key_set`
 - Core plugins: spawn/stop RPC endpoints scaffolded (not implemented) and CLI wiring added
  - Capability gate: call-core requires plugin.enabled=1 and permissions.core.call=true
 
