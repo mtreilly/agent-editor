@@ -14,6 +14,8 @@ This is a living list of Tauri IPC/JSON-RPC methods and their intent. See `src-t
 - `docs_update(payload)` — `{ doc_id, body, message? }`
 - `docs_get(docId, content?)`
 - `docs_delete(docId)`
+- `export_docs(repoId?, include_deleted?, include_versions?, include_attachments?)` — returns an array of docs; attachments are included when `include_attachments=true` (always true for tar exports).
+- `import_docs(path, repo_id?, new_repo_name?, dry_run?, merge_strategy?)` — parses json/jsonl/tar archives (attachments restored when present); default is dry-run.
 
 ## Search & Graph
 - `search(repoId?, query, limit?, offset?)`
