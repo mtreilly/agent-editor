@@ -9,6 +9,7 @@ Guides
 - Development: `guides/DEVELOPMENT.md`
 - CI: `guides/CI.md`
 - Build & Package: `guides/BUILD.md`
+ - Packaging: `guides/PACKAGING.md`
 - Smoke: `guides/SMOKE.md`
 - Testing: `guides/TESTING.md`
  - Vibe Notifications: `guides/VIBE_NOTIFICATIONS.md`

@@ -43,3 +43,6 @@ Dev/Test defaults:
 ## Tmux packaging
 - Use `pnpm tmux:tauri-build` for interactive, reproducible packaging runs across panes.
 - In CI or headless agents, set `HEADLESS=1 pnpm tmux:tauri-build` to avoid attaching.
+
+## Multi‑OS packaging and signing
+- See `guides/PACKAGING.md` for GitHub Actions matrix example and platform signing/notarization notes.
