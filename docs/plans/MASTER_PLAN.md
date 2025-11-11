@@ -714,6 +714,16 @@ SELECT path FROM q WHERE json_extract(path, '$[#-1]') = :end_id LIMIT 1;
 #[tauri::command] async fn serve_api_start(port: Option<u16>) -> Result<(), String>;
 ```
 
+### Implemented commands (v0)
+- Repo: `repos_add`, `repos_list`, `repos_info`, `repos_remove`, `scan_repo`
+- Docs: `docs_create`, `docs_update`, `docs_get`, `docs_delete`
+- Search: `search` (FTS5 with bm25 + snippet)
+- Graph: `graph_backlinks`, `graph_neighbors`, `graph_related`, `graph_path`
+- AI: `ai_run` (local echo stub, context assembly, ai_trace persistence)
+- Anchors: `anchors_upsert`, `anchors_list`, `anchors_delete`
+- Providers: `ai_providers_list`, `ai_providers_enable`, `ai_providers_disable` (privacy defaults)
+- Sidecar control: `serve_api_start`
+
 ### TS client wrappers
 Headless JSON-RPC sidecar for automation:
 - Run: `cargo run --manifest-path src-tauri/Cargo.toml --bin rpc_sidecar`
@@ -784,6 +794,20 @@ Enforcement
 - Providers: opt-in per repo; api keys stored in OS keychain; providers restricted by allowlist.
 - Plugin sandbox: deny-by-default; explicit capability grants; per-plugin FS chroot to repo or cache; network domain allowlist.
 - Secrets scanning and redaction before AI calls; logs redact by default.
+
+## Phase Checkpoints
+
+M1 Core DB + Scanner + FTS — COMPLETE
+- End-to-end: repo add/scan, search JSON results with FTS parity
+- FTS invariants verified (fts_missing=0) by `scripts/cli-smoke.sh`
+- Sidecar JSON-RPC stable; packaging readiness (RGBA icon, AE_DB/.dev DB)
+
+M2 Editor + Wiki + Graph — In Progress (exit criteria)
+- Search UX: keyboard navigation, sanitized snippets, listbox ARIA with roving focus
+- Graph UI: neighbor depth control (1–3), shortest path tool, e2e smoke
+- Editor: anchors insert/jump/copy link; doc route supports `?anchor=` auto-jump
+- i18n: extracted strings (common, search, graph, editor, settings, repo)
+- Providers: registry + settings UI to enable/disable (network off by default)
 
 ## Build/Run/Package
 - Dev: `pnpm install && pnpm dev` (starts Vite + Tauri dev)
