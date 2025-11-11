@@ -15,9 +15,25 @@ function RepoPage() {
   const [repos, setRepos] = React.useState<Array<{ id: string; name: string; path: string }>>([])
   const [loading, setLoading] = React.useState(false)
   const [lastEvt, setLastEvt] = React.useState<string>("")
+  const [providers, setProviders] = React.useState<Array<api.Provider>>([])
+  const [defaults, setDefaults] = React.useState<Record<string, string>>({})
 
   const load = React.useCallback(async () => {
-    setRepos(await api.reposList())
+    const rs = await api.reposList()
+    setRepos(rs)
+    try {
+      const ps = await api.aiProvidersList()
+      setProviders(ps)
+    } catch {}
+    const map: Record<string, string> = {}
+    for (const r of rs) {
+      try {
+        const info = await api.reposInfo(r.id)
+        const dp = info?.settings?.default_provider || 'local'
+        map[r.id] = dp
+      } catch {}
+    }
+    setDefaults(map)
   }, [])
 
   React.useEffect(() => {
@@ -74,6 +90,24 @@ function RepoPage() {
               <div>
                 <div className="font-medium">{r.name || r.path}</div>
                 <div className="text-xs text-gray-600">{r.path}</div>
+                {!!providers.length && (
+                  <div className="mt-2 flex items-center gap-2 text-xs">
+                    <span className="text-gray-700">{t('defaultProvider') || 'Default Provider'}:</span>
+                    <select
+                      className="border rounded px-2 py-1"
+                      value={defaults[r.id] || 'local'}
+                      onChange={(e) => setDefaults((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                    >
+                      {providers.map((p) => (
+                        <option key={p.name} value={p.name}>{p.name}{p.enabled ? '' : ' (disabled)'}</option>
+                      ))}
+                    </select>
+                    <button
+                      className="px-2 py-1 border rounded"
+                      onClick={async () => { await api.reposSetDefaultProvider(r.id, defaults[r.id] || 'local'); await load() }}
+                    >{t('button.set') || 'Set'}</button>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <button className="px-2 py-1 border rounded" onClick={() => scan(r.path)} disabled={loading}>{t('scan')}</button>

@@ -44,6 +44,8 @@ export const reposList = () => safeInvoke<Array<{ id: string; name: string; path
 export const reposInfo = (id_or_name: string) => safeInvoke<any>('repos_info', { idOrName: id_or_name })
 
 export const reposRemove = (id_or_name: string) => safeInvoke<{ removed: boolean }>('repos_remove', { idOrName: id_or_name })
+export const reposSetDefaultProvider = (id_or_name: string, provider: string) =>
+  safeInvoke<{ updated: boolean }>('repos_set_default_provider', { idOrName: id_or_name, provider })
 
 export const scanRepo = (
   repoPath: string,

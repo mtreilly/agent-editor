@@ -78,6 +78,16 @@ pub async fn repos_remove(id_or_name: String, db: State<'_, std::sync::Arc<Db>>)
 }
 
 #[tauri::command]
+pub async fn repos_set_default_provider(id_or_name: String, provider: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let n = conn.execute(
+        "UPDATE repo SET settings=json_set(COALESCE(settings,json('{}')),'$.default_provider',?2), updated_at=datetime('now') WHERE id=?1 OR name=?1",
+        params![id_or_name, provider],
+    ).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"updated": n>0}))
+}
+
+#[tauri::command]
 pub async fn scan_repo(repo_path: String, filters: Option<ScanFilters>, watch: Option<bool>, debounce: Option<u64>, db: State<'_, std::sync::Arc<Db>>, app: tauri::AppHandle) -> Result<ScanJobReport, String> {
     let job_id = Uuid::new_v4().to_string();
     let repo_id = {
@@ -326,14 +336,25 @@ pub async fn ai_run(provider: String, doc_id: String, anchor_id: Option<String>,
 }
 
 pub fn ai_run_core(db: &std::sync::Arc<Db>, req: AiRunRequest) -> Result<serde_json::Value, String> {
-    // Fetch body
-    let conn = db.0.lock();
-    let body: String = conn.query_row(
-        "SELECT body FROM doc_fts WHERE rowid=(SELECT rowid FROM doc WHERE id=?1 OR slug=?1)",
-        rusqlite::params![req.doc_id],
-        |r| r.get(0),
-    ).map_err(|e| e.to_string())?;
-    drop(conn);
+    // Resolve provider: if empty or "default", use repo.settings.default_provider; else use provided
+    let (body, provider_name): (String, String) = {
+        let conn = db.0.lock();
+        // fetch body and repo_id
+        let (body, repo_id): (String, String) = conn.query_row(
+            "SELECT df.body, d.repo_id FROM doc_fts df JOIN doc d ON d.rowid=df.rowid WHERE d.id=?1 OR d.slug=?1",
+            rusqlite::params![req.doc_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        ).map_err(|e| e.to_string())?;
+        let use_default = req.provider.is_empty() || req.provider == "default";
+        let provider = if use_default {
+            conn.query_row(
+                "SELECT COALESCE(json_extract(settings,'$.default_provider'),'local') FROM repo WHERE id=?1",
+                rusqlite::params![repo_id],
+                |r| r.get::<_, String>(0),
+            ).unwrap_or_else(|_| "local".into())
+        } else { req.provider.clone() };
+        (body, provider)
+    };
 
     // Determine target line
     let mut line = req.line.unwrap_or(1);
@@ -345,7 +366,7 @@ pub fn ai_run_core(db: &std::sync::Arc<Db>, req: AiRunRequest) -> Result<serde_j
     let redacted = redact(&context);
 
     // Simulated provider response (echo)
-    let response_text = format!("[{}]\nPrompt: {}\n---\n{}", req.provider, req.prompt, redacted);
+    let response_text = format!("[{}]\nPrompt: {}\n---\n{}", provider_name, req.prompt, redacted);
 
     // Persist ai_trace
     let conn = db.0.lock();

@@ -4,6 +4,8 @@
   "placeholder.name": "Optional name",
   "button.add": "Add",
   "repositories": "Repositories",
+  "defaultProvider": "Default Provider",
+  "button.set": "Set",
   "scan": "Scan",
   "remove": "Remove",
   "scanEvent": "Scan: {{event}}"
