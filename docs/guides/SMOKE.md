@@ -14,10 +14,16 @@ Goal: validate JSON-RPC, scanning, and CLI without launching the Tauri UI.
 pnpm rpc:dev
 ```
 
-2) In a new terminal, run the CLI smoke
+2) In a new terminal, run the CLI smoke (tmux or headless)
 
 ```
 pnpm smoke:cli
+
+# Or run the tmux smoke session (sidecar/web/CLI)
+pnpm tmux:smoke
+
+# Headless examples
+HEADLESS=1 pnpm tmux:smoke
 ```
 
 This script will:

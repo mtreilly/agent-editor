@@ -662,6 +662,14 @@ Exit Criteria
 - Packaging:
   - Tmux packaging flow added; docs updated.
 
+### Core Plugin Demo
+- Added a simple echo-core Node plugin under `plugins/echo-core/echo.js` for local demos.
+- tmux demos:
+  - RPC/FS: `pnpm tmux:plugin-rpc-demo`
+  - Net domains: `pnpm tmux:plugin-net-demo`
+  - DB gates: `pnpm tmux:plugin-db-demo`
+- All demos support `HEADLESS=1` for non-interactive runs.
+
 
 ```ts
 // plugins/custom-scanner/index.ts

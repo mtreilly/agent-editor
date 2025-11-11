@@ -137,6 +137,26 @@ mod tests_perm {
     }
 
     #[test]
+    fn invalid_envelope_missing_method() {
+        let db = test_db();
+        insert_plugin(&db, "p7", 1, r#"{"core":{"call":1}}"#);
+        // Missing method field
+        let line = r#"{"jsonrpc":"2.0","id":"1","params":{}}"#;
+        let err = plugins_call_core_check(&db, "p7", line).unwrap_err();
+        assert_eq!(err, "invalid_request");
+    }
+
+    #[test]
+    fn invalid_envelope_bad_json() {
+        let db = test_db();
+        insert_plugin(&db, "p8", 1, r#"{"core":{"call":1}}"#);
+        // Not JSON
+        let line = "this is not json";
+        let err = plugins_call_core_check(&db, "p8", line).unwrap_err();
+        assert_eq!(err, "invalid_request");
+    }
+
+    #[test]
     fn db_permissions_query_and_write() {
         let db = test_db();
         // Only query allowed
