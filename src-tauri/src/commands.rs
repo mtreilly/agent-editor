@@ -754,7 +754,7 @@ pub async fn plugins_upsert(name: String, kind: Option<String>, version: Option<
 struct CoreProc {
     child: Child,
     stdin: Option<ChildStdin>,
-    stdout: Option<BufReader<ChildStdout>>,
+    stdout: Option<ChildStdout>,
     exec: String,
     args: Vec<String>,
     restart_count: u32,
@@ -781,7 +781,7 @@ fn plugin_log_line(name: &str, stream: &str, line: &str) {
     }
 }
 
-fn spawn_core_child(name: &str, exec: &str, args: &Vec<String>) -> Result<(Child, Option<ChildStdin>, Option<BufReader<ChildStdout>>), String> {
+fn spawn_core_child(name: &str, exec: &str, args: &Vec<String>) -> Result<(Child, Option<ChildStdin>, Option<ChildStdout>), String> {
     let mut cmd = OsCommand::new(exec);
     if !args.is_empty() { cmd.args(args); }
     let mut child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
@@ -803,7 +803,7 @@ fn spawn_core_child(name: &str, exec: &str, args: &Vec<String>) -> Result<(Child
         });
     }
     let stdin = child.stdin.take();
-    let stdout = child.stdout.take().map(BufReader::new);
+    let stdout = child.stdout.take();
     Ok((child, stdin, stdout))
 }
 
@@ -982,14 +982,33 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
             stdin.write_all(b"\n").map_err(|e| e.to_string())?;
             stdin.flush().ok();
         } else { return Err("stdin_closed".into()); }
-        if let Some(stdout) = proc.stdout.as_mut() {
-            let mut buf = String::new();
-            stdout.read_line(&mut buf).map_err(|e| e.to_string())?;
-            let trimmed = buf.trim();
-            if !trimmed.is_empty() { plugin_log_line(&name, "stdout", trimmed); }
-            if trimmed.is_empty() { return Ok(serde_json::json!({"ok": true})); }
-            let val: serde_json::Value = serde_json::from_str(trimmed).unwrap_or(serde_json::json!({"line": trimmed}));
-            return Ok(val);
+        if let Some(stdout) = proc.stdout.take() {
+            // Read one JSON line with a watchdog timeout and then return stdout to proc
+            let (tx, rx) = std::sync::mpsc::channel();
+            std::thread::spawn(move || {
+                let mut reader = std::io::BufReader::new(stdout);
+                let mut buf = String::new();
+                let res = reader.read_line(&mut buf).map_err(|e| e.to_string());
+                // Return both the (possibly updated) stdout and the line
+                let stdout_back = reader.into_inner();
+                let _ = tx.send((stdout_back, res, buf));
+            });
+            let timeout_ms: u64 = std::env::var("PLUGIN_CALL_TIMEOUT_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(5000);
+            match rx.recv_timeout(std::time::Duration::from_millis(timeout_ms)) {
+                Ok((stdout_back, res, buf)) => {
+                    proc.stdout = Some(stdout_back);
+                    res.map_err(|e| e)?;
+                    let trimmed = buf.trim();
+                    if !trimmed.is_empty() { plugin_log_line(&name, "stdout", trimmed); }
+                    if trimmed.is_empty() { return Ok(serde_json::json!({"ok": true})); }
+                    let val: serde_json::Value = serde_json::from_str(trimmed).unwrap_or(serde_json::json!({"line": trimmed}));
+                    return Ok(val);
+                }
+                Err(_timeout) => {
+                    // On timeout, leave stdout as None and signal timeout; next call will trigger restart policy
+                    return Err("timeout".into());
+                }
+            }
         } else { return Err("stdout_closed".into()); }
     }
     Err("not_found".into())
