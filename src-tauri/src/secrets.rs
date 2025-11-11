@@ -37,3 +37,15 @@ pub fn provider_key_exists(db: &Db, name: &str) -> Result<bool, String> {
     Ok(has != 0)
 }
 
+// Fetch provider secret from OS keychain when available.
+// Without keyring feature enabled, return an explicit error to avoid leaking secrets via other channels.
+pub fn provider_key_get(_db: &Db, name: &str) -> Result<String, String> {
+    #[cfg(feature = "keyring")]
+    {
+        return kr_entry(name)
+            .get_password()
+            .map_err(|e| format!("keyring_error: {}", e));
+    }
+    let _ = name;
+    Err("keyring_not_enabled".into())
+}

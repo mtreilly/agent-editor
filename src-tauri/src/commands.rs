@@ -408,7 +408,10 @@ pub fn ai_run_core(db: &std::sync::Arc<Db>, req: AiRunRequest) -> Result<serde_j
         }
     }
     let response_text = if provider_name == "openrouter" {
-        format!("[openrouter]\nPrompt: {}\n---\n{}", req.prompt, redacted)
+        match crate::ai::call_openrouter(db, &req.prompt, &redacted) {
+            Ok(txt) => txt,
+            Err(err) => format!("[openrouter:error:{}]\nPrompt: {}\n---\n{}", err, req.prompt, redacted),
+        }
     } else {
         format!("[{}]\nPrompt: {}\n---\n{}", provider_name, req.prompt, redacted)
     };

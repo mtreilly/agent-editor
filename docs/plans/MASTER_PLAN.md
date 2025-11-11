@@ -632,6 +632,12 @@ Exit Criteria
 - Spawn one core plugin in dry-run mode with logged capability grants
 - Providers: at least one remote provider enabled behind opt-in with key loading (no network by default)
 
+### Progress Update — OpenRouter Adapter
+- Implemented OpenRouter provider call path in core (Rust) using reqwest with rustls (blocking client).
+- Secrets fetched from OS keychain via `keyring` feature; DB fallback remains presence-only (no secret persisted).
+- Endpoint allowlisted to `https://api.openrouter.ai/v1/chat/completions` for this adapter.
+- `ai_run` now invokes the provider when `provider=openrouter` is enabled and key exists; on error, falls back to a clearly tagged echo stub.
+
 
 ```ts
 // plugins/custom-scanner/index.ts

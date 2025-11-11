@@ -117,6 +117,20 @@ logging:
 - Build: Biome, pnpm, Vite + SWC, day.js
 - **FORBIDDEN**: Chakra UI, barrel files, MobX, ESLint/Prettier, npm/yarn, moment.js
 
+### Vibe + Tmux (MANDATORY)
+- Always run long-lived or build commands via tmux scripts. Do not run `pnpm`, `cargo`, or `go` directly for dev/build/smoke; use the provided tmux wrappers.
+  - Dev: `pnpm tmux:dev`
+  - Smoke tests: `pnpm tmux:smoke`
+  - E2E tests: `pnpm tmux:e2e`
+  - Benchmarks: `pnpm tmux:bench`, Scan bench: `pnpm bench:scan`
+  - Provider demos: `pnpm tmux:provider-demo`
+  - Bootstrap (install + check + CLI build): `pnpm tmux:bootstrap`
+- Discord notifications via Vibe CLI are required at start/progress/done for each autonomous task:
+  - Start: `pnpm vibe:start`
+  - Progress: `pnpm vibe:progress`
+  - Done: `pnpm vibe:done`
+- Headless CI/agent usage: set `HEADLESS=1` to skip `tmux attach` when supported by the script.
+
 ### Testing
 - Unit tests: `*.test.ts(x)` files alongside implementation
 - Integration tests: `tests/integration/`

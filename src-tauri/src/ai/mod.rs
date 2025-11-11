@@ -1,6 +1,83 @@
 use crate::secrets;
 use crate::db::Db;
 
+#[derive(serde::Serialize)]
+struct OrMessage<'a> {
+    role: &'a str,
+    content: &'a str,
+}
+
+#[derive(serde::Serialize)]
+struct OrRequest<'a> {
+    model: &'a str,
+    messages: Vec<OrMessage<'a>>,
+}
+
+#[derive(serde::Deserialize)]
+struct OrChoiceMsg {
+    content: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct OrChoice {
+    message: Option<OrChoiceMsg>,
+}
+
+#[derive(serde::Deserialize)]
+struct OrResponse {
+    choices: Option<Vec<OrChoice>>,
+}
+
+// Minimal OpenRouter call using blocking reqwest with rustls.
+// Reads model from provider.config->model if present; otherwise defaults to "openrouter/auto".
+pub fn call_openrouter(db: &Db, prompt: &str, context: &str) -> Result<String, String> {
+    let key = secrets::provider_key_get(db, "openrouter")?;
+
+    // Discover model config if set
+    let model: String = {
+        let conn = db.0.lock();
+        conn.query_row(
+            "SELECT COALESCE(json_extract(config,'$.model'),'openrouter/auto') FROM provider WHERE name='openrouter'",
+            [],
+            |r| r.get::<_, String>(0),
+        )
+        .unwrap_or_else(|_| "openrouter/auto".to_string())
+    };
+
+    let user_content = format!("{}\n\n---\n{}", prompt, context);
+    let req = OrRequest {
+        model: &model,
+        messages: vec![
+            OrMessage { role: "system", content: "You are an AI assistant helping with code editing in an IDE. Be concise." },
+            OrMessage { role: "user", content: &user_content },
+        ],
+    };
+
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("agent-editor/0.0.0 (+https://example.local)")
+        .build()
+        .map_err(|e| format!("http_client_error: {}", e))?;
+
+    let res: OrResponse = client
+        .post("https://api.openrouter.ai/v1/chat/completions")
+        .bearer_auth(key)
+        .json(&req)
+        .send()
+        .and_then(|r| r.error_for_status())
+        .map_err(|e| format!("http_error: {}", e))?
+        .json()
+        .map_err(|e| format!("decode_error: {}", e))?;
+
+    if let Some(choices) = res.choices {
+        for ch in choices {
+            if let Some(msg) = ch.message {
+                if let Some(text) = msg.content { return Ok(text); }
+            }
+        }
+    }
+    Err("empty_response".into())
+}
+
 pub fn provider_test(db: &Db, name: &str, prompt: &str) -> Result<serde_json::Value, String> {
     // Ensure key exists (for remote providers) and provider is enabled
     let conn = db.0.lock();
@@ -21,4 +98,3 @@ pub fn provider_test(db: &Db, name: &str, prompt: &str) -> Result<serde_json::Va
     // Deterministic stub result
     Ok(serde_json::json!({ "provider": name, "ok": true, "echo": prompt }))
 }
-

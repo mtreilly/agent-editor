@@ -1,6 +1,6 @@
 # Status — agent-editor
 
-Phase: M2 Editor + Wiki + Graph (COMPLETE)
+Phase: M3 Plugins + Providers (IN PROGRESS)
 
 Completed
 - Core DB schema + FTS5 virtual table
@@ -48,7 +48,7 @@ Exit criteria met (M1 + M2)
 - M1: repo add/scan works end-to-end with JSON-RPC and CLI; search returns valid JSON and matches FTS results (P95 on fixtures < 50ms); FTS invariant checks pass in `scripts/cli-smoke.sh` (fts_missing=0, errors=0)
 - M2: search UX (keyboard + ARIA + sanitized snippets); graph neighbors depth + path tool; editor anchors (insert/jump/copy) + `?anchor=` auto-jump; i18n extracted for core routes; providers registry + settings UI
 
-Next Phase: M3 Plugins + Providers
+Next Phase: M4 Packaging + CI
 - UI Plugins: surface commands via host; integrate with command palette; plugin enable/disable lifecycle
 - Core Plugins: wire spawn and JSON-RPC IPC; capability checks (FS/net/DB/AI)
 - Providers: add real Codex/Claude/OpenRouter/OpenCode adapters; keychain storage; stricter redaction
