@@ -532,6 +532,34 @@ pub async fn plugins_call_core(name: String, line: String, db: State<'_, std::sy
             .unwrap_or(0);
         if allowed == 0 { return Err("forbidden".into()); }
     }
+    // net.request domain allowlist: permissions.net.domains contains allowed hosts
+    if method.starts_with("net.request") {
+        let params_v = parsed.get("params").cloned().unwrap_or(serde_json::json!({}));
+        let url_s = params_v.get("url").and_then(|v| v.as_str()).unwrap_or("");
+        if !url_s.is_empty() {
+            // naive host extraction
+            let host = if let Some(rest) = url_s.split("//").nth(1) {
+                rest.split('/').next().unwrap_or("").split(':').next().unwrap_or("")
+            } else { url_s };
+            let conn = db.0.lock();
+            let perms_json: Option<String> = conn.query_row("SELECT permissions FROM plugin WHERE name=?1", params![name], |r| r.get(0)).ok();
+            let mut allowed = false;
+            if let Some(pj) = perms_json {
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&pj) {
+                    if let Some(arr) = val.get("net").and_then(|n| n.get("domains")).and_then(|d| d.as_array()) {
+                        for d in arr {
+                            if let Some(dom) = d.as_str() {
+                                if host.eq_ignore_ascii_case(dom) || (dom.starts_with('.') && host.ends_with(dom)) {
+                                    allowed = true; break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if !allowed { return Err("forbidden_net_domain".into()); }
+        }
+    }
     // FS roots allowlist: when calling fs.* methods, enforce that params.path is under one of permissions.fs.roots
     if method.starts_with("fs.") {
         let params_v = parsed.get("params").cloned().unwrap_or(serde_json::json!({}));

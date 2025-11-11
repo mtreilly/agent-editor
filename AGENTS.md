@@ -287,6 +287,7 @@ pnpm preview                      # Preview production build
   - `pnpm vibe:start` / `pnpm vibe:progress` / `pnpm vibe:done` — send Discord notifications via vibe CLI in a tmux session (requires `vibe` installed; otherwise logs locally)
   - `pnpm tmux:plugin-demo` — runs sidecar and starts the echo core plugin via CLI to demonstrate spawn
   - `pnpm tmux:plugin-rpc-demo` — demonstrates call-core capability gate (forbidden until fs.read allowed), then successful JSON-RPC fs.read via echo-core
+  - `pnpm tmux:plugin-net-demo` — demonstrates net.request domain allowlist enforcement (forbidden until example.com allowed), then successful JSON-RPC net.request
 
 ## Notifications (Mandatory)
 - Always send a Discord message via vibe CLI when you start, periodically during work, and when you finish:

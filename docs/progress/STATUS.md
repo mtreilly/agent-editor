@@ -36,7 +36,8 @@ Completed
 - Providers: API key set/get stub via provider.config (to be replaced with OS keychain in M3)
  - Provider keys: keychain-ready facade added (`secrets.rs`), with keyring feature path and DB fallback storing only `key_set`
 - Core plugins: spawn/stop RPC endpoints scaffolded (not implemented) and CLI wiring added
- - Capability gate: call-core requires plugin.enabled=1 and permissions.core.call=true
+- Capability gate: call-core requires plugin.enabled=1 and permissions.core.call=true
+ - Net domains: host enforces `permissions.net.domains` for `net.request*`; added tmux net demo
 
 Bench targets (current phase)
 - FTS: P95 <= 50ms, P99 <= 80ms, avg <= 25ms on 100k docs synthetic dataset

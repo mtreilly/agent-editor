@@ -21,6 +21,7 @@
     "tmux:bench": "bash scripts/tmux-bench.sh",
     "tmux:plugin-demo": "bash scripts/tmux-plugin-demo.sh",
     "tmux:plugin-rpc-demo": "bash scripts/tmux-plugin-rpc-demo.sh",
+    "tmux:plugin-net-demo": "bash scripts/tmux-plugin-net-demo.sh",
     "tmux:bootstrap": "bash scripts/tmux-bootstrap.sh",
     "bench:fts": "bash scripts/bench-fts.sh the 50",
     "bench:scan": "bash scripts/bench-scan.sh",
