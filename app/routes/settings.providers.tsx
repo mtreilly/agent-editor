@@ -14,6 +14,7 @@ function ProvidersSettings() {
   const [error, setError] = React.useState<string | null>(null)
   const [keys, setKeys] = React.useState<Record<string, { has: boolean; value: string }>>({})
   const [globalDefault, setGlobalDefault] = React.useState<string>('local')
+  const [models, setModels] = React.useState<Record<string, string>>({})
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -26,13 +27,19 @@ function ProvidersSettings() {
         if (g && g.value && typeof g.value === 'string') setGlobalDefault(g.value)
       } catch {}
       const keyStates: Record<string, { has: boolean; value: string }> = {}
+      const modelStates: Record<string, string> = {}
       for (const p of list) {
         if (p.kind === 'remote') {
           const st = await api.aiProviderKeyGet(p.name)
           keyStates[p.name] = { has: !!st?.has_key, value: '' }
+          try {
+            const mg = await api.aiProviderModelGet(p.name)
+            modelStates[p.name] = mg?.model || ''
+          } catch {}
         }
       }
       setKeys(keyStates)
+      setModels(modelStates)
     } catch (e: any) {
       setError(e?.message || 'Failed to load providers')
     } finally {
@@ -66,6 +73,11 @@ function ProvidersSettings() {
     } catch (e: any) {
       alert(`Provider ${name} test failed: ${e?.message || e}`)
     }
+  }
+
+  async function saveModel(name: string) {
+    const v = models[name] || ''
+    await api.aiProviderModelSet(name, v)
   }
 
   return (
@@ -119,6 +131,18 @@ function ProvidersSettings() {
                     <button className="px-2 py-1 border rounded" onClick={() => saveKey(p.name)}>{t('button.save')}</button>
                     <button className="px-2 py-1 border rounded" onClick={() => testProvider(p.name)}>{t('button.test') || 'Test'}</button>
                     {keys[p.name]?.has && <span className="text-xs text-gray-600">{t('label.keySet')}</span>}
+                  </div>
+                )}
+                {p.name === 'openrouter' && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder={t('modelPlaceholder', { defaultValue: 'openrouter/auto' })}
+                      className="border rounded px-2 py-1"
+                      value={models[p.name] ?? ''}
+                      onChange={(e) => setModels((prev) => ({ ...prev, [p.name]: e.target.value }))}
+                    />
+                    <button className="px-2 py-1 border rounded" onClick={() => saveModel(p.name)}>{t('button.saveModel', { defaultValue: 'Save Model' })}</button>
                   </div>
                 )}
               </td>

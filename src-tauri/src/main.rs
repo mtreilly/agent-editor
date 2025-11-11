@@ -50,6 +50,8 @@ fn main() {
             commands::ai_providers_disable,
             commands::ai_provider_key_set,
             commands::ai_provider_key_get,
+            commands::ai_provider_model_get,
+            commands::ai_provider_model_set,
             commands::ai_provider_test,
             commands::plugins_list,
             commands::plugins_info,

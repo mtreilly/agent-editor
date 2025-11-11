@@ -466,6 +466,32 @@ pub async fn ai_provider_key_get(name: String, db: State<'_, std::sync::Arc<Db>>
     Ok(serde_json::json!({"has_key": has}))
 }
 
+// Provider model config helpers (OpenRouter and others)
+#[tauri::command]
+pub async fn ai_provider_model_get(name: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let model: Option<String> = conn
+        .query_row(
+            "SELECT json_extract(config,'$.model') FROM provider WHERE name=?1",
+            params![name],
+            |r| r.get(0),
+        )
+        .ok();
+    Ok(serde_json::json!({"model": model.unwrap_or_default()}))
+}
+
+#[tauri::command]
+pub async fn ai_provider_model_set(name: String, model: String, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
+    let conn = db.0.lock();
+    let n = conn
+        .execute(
+            "UPDATE provider SET config=json_set(COALESCE(config,json('{}')),'$.model',?2), updated_at=datetime('now') WHERE name=?1",
+            params![name, model],
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({"updated": n>0}))
+}
+
 #[tauri::command]
 pub async fn ai_provider_test(name: String, prompt: Option<String>, db: State<'_, std::sync::Arc<Db>>) -> Result<serde_json::Value, String> {
     let res = ai::provider_test(&db, &name, &prompt.unwrap_or_else(|| "ping".into()))?;

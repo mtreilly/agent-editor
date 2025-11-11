@@ -40,6 +40,10 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
       return { value: 'local' } as any as T
     case 'app_settings_set':
       return { updated: true } as any as T
+    case 'ai_provider_model_get':
+      return { model: 'openrouter/auto' } as any as T
+    case 'ai_provider_model_set':
+      return { updated: true } as any as T
     case 'anchors_upsert':
       return { ok: true } as any as T
     case 'anchors_list':
@@ -130,6 +134,8 @@ export const pluginsRemove = (name: string) => safeInvoke<{ removed: boolean }>(
 export const aiProviderKeySet = (name: string, key: string) => safeInvoke<{ updated: boolean }>('ai_provider_key_set', { name, key })
 export const aiProviderKeyGet = (name: string) => safeInvoke<{ has_key: boolean }>('ai_provider_key_get', { name })
 export const aiProviderTest = (name: string, prompt?: string) => safeInvoke<any>('ai_provider_test', { name, prompt })
+export const aiProviderModelGet = (name: string) => safeInvoke<{ model: string }>('ai_provider_model_get', { name })
+export const aiProviderModelSet = (name: string, model: string) => safeInvoke<{ updated: boolean }>('ai_provider_model_set', { name, model })
 
 export const pluginsSpawnCore = (name: string, exec: string, args?: string[]) =>
   safeInvoke<{ ok?: boolean }>('plugins_spawn_core', { name, exec, args })

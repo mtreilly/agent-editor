@@ -20,5 +20,11 @@ test.describe('Settings: Providers', () => {
     const select = page.locator('select')
     await select.selectOption('openrouter')
     await expect(select).toHaveValue('openrouter')
+
+    // OpenRouter model input present and usable
+    const modelInput = page.getByPlaceholder(/openrouter\/auto/i)
+    await modelInput.fill('openrouter/auto')
+    const saveModel = page.getByRole('button', { name: /Save Model/i })
+    await saveModel.click()
   })
 })

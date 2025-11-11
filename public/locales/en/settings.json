@@ -12,6 +12,8 @@
   "apiKey": "API Key",
   "button.save": "Save",
   "button.test": "Test",
+  "button.saveModel": "Save Model",
   "label.keySet": "Key set",
-  "globalDefaultProvider": "Global default provider"
+  "globalDefaultProvider": "Global default provider",
+  "modelPlaceholder": "openrouter/auto"
 }
