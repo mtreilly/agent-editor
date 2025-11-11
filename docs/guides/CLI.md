@@ -63,3 +63,4 @@ agent-editor import docs backup/docs.tar --repo r1 --dry-run
 agent-editor import docs backup/docs.tar --new-repo imported --merge-strategy overwrite
 
 > Dry-run mode is enabled by default; pass `--dry-run=false` when you are ready to apply the import.
+> While the import runs the CLI streams `[import] …` progress lines (processed count + insert/update/skip stats) sourced from the backend progress log.

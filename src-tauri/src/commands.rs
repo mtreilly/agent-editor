@@ -12,7 +12,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command as OsCommand, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::path::{Path, PathBuf};
 use std::io::{Write, BufRead, BufReader, Read};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use tar::Archive;
 
 #[derive(Deserialize)]
@@ -360,7 +360,7 @@ mod tests_import {
         let docs = read_docs_from_path(export_path.as_path()).unwrap();
         {
             let conn = db.0.lock();
-            let res = import_docs_apply(&conn, docs, None, Some("Imported Repo".into()), false, "keep", &export_path_str).unwrap();
+            let res = import_docs_apply(&conn, docs, None, Some("Imported Repo".into()), false, "keep", &export_path_str, None).unwrap();
             assert_eq!(res["inserted"].as_u64().unwrap(), 1);
             assert_eq!(res["status"].as_str(), Some("imported"));
         }
@@ -480,6 +480,7 @@ mod tests_import {
                 false,
                 "keep",
                 "import.json",
+                None,
             )
             .unwrap();
             assert_eq!(summary["skipped"].as_u64().unwrap(), 1);
@@ -502,6 +503,7 @@ mod tests_import {
                 false,
                 "overwrite",
                 "import.json",
+                None,
             )
             .unwrap();
             assert_eq!(summary["updated"].as_u64().unwrap(), 1);
@@ -522,6 +524,42 @@ mod tests_import {
                 .unwrap();
             assert!(version_count >= 1);
         }
+    }
+
+    #[test]
+    fn import_docs_writes_progress_file() {
+        let db = test_db();
+        let docs = vec![DocImportRow {
+            id: None,
+            repo_id: None,
+            slug: "progress-doc".into(),
+            title: Some("Progress".into()),
+            body: Some("# Body".into()),
+            is_deleted: Some(false),
+            updated_at: None,
+            versions: None,
+        }];
+        let progress_path = std::env::temp_dir()
+            .join(format!("ae-import-progress-{}.log", uuid::Uuid::new_v4()))
+            .to_string_lossy()
+            .to_string();
+        {
+            let conn = db.0.lock();
+            let _ = import_docs_apply(
+                &conn,
+                docs,
+                None,
+                Some("Progress Repo".into()),
+                false,
+                "keep",
+                "import.json",
+                Some(progress_path.as_str()),
+            )
+            .unwrap();
+        }
+        let content = std::fs::read_to_string(&progress_path).unwrap();
+        assert!(content.contains("\"status\":\"imported\""));
+        let _ = std::fs::remove_file(&progress_path);
     }
 }
 
@@ -947,8 +985,10 @@ fn import_docs_apply(
     dry_run: bool,
     merge_strategy: &str,
     path: &str,
+    progress_path: Option<&str>,
 ) -> Result<serde_json::Value, String> {
     if docs.is_empty() {
+        emit_import_progress(progress_path, 0, 0, &ImportStats::default(), if dry_run { "dry_run" } else { "imported" }).ok();
         return Ok(serde_json::json!({
             "path": path,
             "doc_count": 0,
@@ -972,6 +1012,7 @@ fn import_docs_apply(
     if dry_run {
         let (target_repo, _) = resolve_repo_for_import(conn, repo_id.clone(), new_repo_name.clone(), true)?;
         let stats = simulate_import(conn, &docs, &target_repo, merge_strategy, repo_id.is_none())?;
+        emit_import_progress(progress_path, doc_count, doc_count, &stats, "dry_run").ok();
         return Ok(serde_json::json!({
             "path": path,
             "doc_count": doc_count,
@@ -989,10 +1030,15 @@ fn import_docs_apply(
     let folder_id = ensure_root_folder(conn, &target_repo)?;
     let mut stats = ImportStats::default();
     let tx = conn.transaction().map_err(|e| e.to_string())?;
-    for doc in docs {
+    for (idx, doc) in docs.into_iter().enumerate() {
         import_doc_record(&tx, &target_repo, &folder_id, doc, merge_strategy, &mut stats, path)?;
+        let processed = idx + 1;
+        if processed % IMPORT_PROGRESS_INTERVAL == 0 || processed == doc_count {
+            emit_import_progress(progress_path, processed, doc_count, &stats, "processing")?;
+        }
     }
     tx.commit().map_err(|e| e.to_string())?;
+    emit_import_progress(progress_path, doc_count, doc_count, &stats, "imported").ok();
     Ok(serde_json::json!({
         "path": path,
         "doc_count": doc_count,
@@ -1265,6 +1311,7 @@ pub struct ImportDocsPayload {
     pub new_repo_name: Option<String>,
     pub dry_run: Option<bool>,
     pub merge_strategy: Option<String>,
+    pub progress_path: Option<String>,
 }
 
 #[derive(Default)]
@@ -1274,8 +1321,37 @@ struct ImportStats {
     skipped: u32,
 }
 
+const IMPORT_PROGRESS_INTERVAL: usize = 25;
+
+#[derive(Serialize)]
+struct ImportProgressEvent {
+    status: String,
+    processed: usize,
+    total: usize,
+    inserted: u32,
+    updated: u32,
+    skipped: u32,
+}
+
+fn emit_import_progress(progress_path: Option<&str>, processed: usize, total: usize, stats: &ImportStats, status: &str) -> Result<(), String> {
+    let Some(path) = progress_path else { return Ok(()); };
+    let event = ImportProgressEvent {
+        status: status.into(),
+        processed,
+        total,
+        inserted: stats.inserted,
+        updated: stats.updated,
+        skipped: stats.skipped,
+    };
+    let mut file = OpenOptions::new().create(true).append(true).open(path).map_err(|e| e.to_string())?;
+    let line = serde_json::to_string(&event).map_err(|e| e.to_string())?;
+    file.write_all(line.as_bytes()).map_err(|e| e.to_string())?;
+    file.write_all(b"\n").map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 pub fn import_docs_exec(db: &std::sync::Arc<Db>, payload: ImportDocsPayload) -> Result<serde_json::Value, String> {
-    let ImportDocsPayload { path, repo_id, new_repo_name, dry_run, merge_strategy } = payload;
+    let ImportDocsPayload { path, repo_id, new_repo_name, dry_run, merge_strategy, progress_path } = payload;
     if repo_id.is_some() && new_repo_name.is_some() {
         return Err("repo_id and new_repo_name are mutually exclusive".into());
     }
@@ -1283,7 +1359,7 @@ pub fn import_docs_exec(db: &std::sync::Arc<Db>, payload: ImportDocsPayload) -> 
     let dry_run = dry_run.unwrap_or(true);
     let merge_strategy = merge_strategy.unwrap_or_else(|| "keep".to_string());
     let conn = db.0.lock();
-    import_docs_apply(&conn, docs, repo_id, new_repo_name, dry_run, &merge_strategy, &path)
+    import_docs_apply(&conn, docs, repo_id, new_repo_name, dry_run, &merge_strategy, &path, progress_path.as_deref())
 }
 
 #[tauri::command]

@@ -32,5 +32,5 @@
 - ✅ CLI + RPC path implemented; docs/manual updated; round-trip tests cover json exports.
 - ✅ Hydrate doc bodies from `docs/*.md` when `docs.json` omits content (tar fallback).
 - [ ] Add attachment/blob support once binary-friendly doc_blob lands.
-- [ ] Stream progress + stats back to CLI (per 100 docs) for large archives.
+ - ✅ Stream progress + stats back to CLI (per ~25 docs) for large archives.
 - [ ] Consider hash-based dedupe to skip writing identical versions.

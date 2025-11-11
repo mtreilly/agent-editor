@@ -53,3 +53,7 @@ Short, ongoing notes for open questions, ideas, and follow-ups. Keep entries con
 ## 2025-11-11 — Import CLI defaults
 - CLI `agent-editor import docs` now defaults to `--dry-run=true` to match the RPC/manual behavior.
 - Guides updated to remind operators to pass `--dry-run=false` when applying mutations.
+
+## 2025-11-11 — Import progress
+- Added backend progress events every 25 docs plus final status; CLI tails a temporary log and prints `[import] STATUS processed/total inserted=…` lines in real time.
+- Docs describe the streaming behavior; follow-up: consider piping structured progress to JSON output mode.

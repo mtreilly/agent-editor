@@ -32,6 +32,8 @@ agent-editor import docs <path> [--repo <id> | --new-repo <name>] \
 
 All mutations occur under the same transaction to keep FTS, versions, and provenance in sync.
 
+The CLI automatically creates a temporary progress log; the backend appends JSON events every ~25 docs so the CLI can display `[import] PROCESSING …` lines while the import runs.
+
 ## Response Payload
 Both dry runs and real imports return a structured summary (printed by the CLI):
 
