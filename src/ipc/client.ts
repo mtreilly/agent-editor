@@ -44,8 +44,11 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
       return { model: 'openrouter/auto' } as any as T
     case 'ai_provider_model_set':
       return { updated: true } as any as T
-    case 'ai_provider_resolve':
-      return { name: 'local', kind: 'local', enabled: true, has_key: true, allowed: true } as any as T
+    case 'ai_provider_resolve': {
+      const docId = args?.docId || ''
+      const disabled = typeof docId === 'string' && docId.toLowerCase().includes('disabled')
+      return { name: disabled ? 'openrouter' : 'local', kind: disabled ? 'remote' : 'local', enabled: !disabled, has_key: !disabled, allowed: !disabled } as any as T
+    }
     case 'anchors_upsert':
       return { ok: true } as any as T
     case 'anchors_list':

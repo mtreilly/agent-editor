@@ -161,6 +161,9 @@ function DocPage() {
             setAiOut(res.text)
           }} disabled={!lastAnchor || !providerAllowed} title={!providerAllowed ? t('error.providerNotAllowed', { ns: 'editor' }) : undefined}>{t('button.runAIAnchor', { ns: 'editor' })}</button>
         </div>
+        {!providerAllowed && (
+          <div className="text-xs text-amber-700" role="note">{t('error.providerNotAllowed', { ns: 'editor' })}</div>
+        )}
         {aiOut && (
           <div className="border rounded p-3 space-y-2">
             {(aiMeta.provider || aiMeta.model) && (
