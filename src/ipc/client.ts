@@ -23,6 +23,15 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
     }
     case 'search':
       return [] as any as T
+    case 'ai_providers_list':
+      return [
+        { name: 'local', kind: 'local', enabled: true },
+        { name: 'openrouter', kind: 'remote', enabled: false },
+      ] as any as T
+    case 'app_settings_get':
+      return { value: 'local' } as any as T
+    case 'app_settings_set':
+      return { updated: true } as any as T
     case 'anchors_upsert':
       return { ok: true } as any as T
     case 'anchors_list':
