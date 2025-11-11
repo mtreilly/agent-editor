@@ -19,6 +19,10 @@ rl.on('line', async (line) => {
         const url = params && params.url
         // demo: just echo the URL back; host enforces domain allowlist
         process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result: { url, status: 'ok' } }) + '\n')
+      } else if (method === 'db.query') {
+        const sql = params && params.sql
+        // demo: emit a deterministic stub result
+        process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result: { rows: [{ ok: true, sql }] } }) + '\n')
       } else {
         process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32601, message: 'Method not found' } }) + '\n')
       }
