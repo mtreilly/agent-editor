@@ -6,6 +6,71 @@ This guide explains the UI/Core plugin model, permissions, and demos.
 - UI Plugins (TS): loaded dynamically in the web app; contribute commands/views/renderers.
 - Core Plugins (process): spawned by the host (Rust) and communicate over JSON-RPC on stdin/stdout.
 
+## Plugin Lifecycle
+
+### Core Plugin Spawn
+
+Core plugins run as separate processes and communicate via JSON-RPC 2.0 over stdin/stdout.
+
+**Implementation:** `src-tauri/src/plugins/mod.rs`
+
+#### spawn_core_plugin(spec: &CorePluginSpec)
+
+Spawns a child process with:
+- Executable and arguments from spec
+- JSON-RPC channels on stdin/stdout
+- stderr captured and logged with `[plugin:name:stderr]` prefix
+- Process registered in global registry
+- Double-spawn prevention
+
+**Example:**
+```rust
+let spec = CorePluginSpec {
+    name: "echo".to_string(),
+    exec: "node".to_string(),
+    args: vec!["plugins/echo-core/echo.cjs".to_string()],
+    env: vec![],
+    caps: Capabilities { ... },
+};
+spawn_core_plugin(&spec)?;
+```
+
+#### shutdown_core_plugin(name: &str)
+
+Gracefully terminates a plugin:
+- Unix: Sends SIGTERM, waits 5 seconds, sends SIGKILL if needed
+- Windows: Immediate termination
+- Cleans up from registry
+
+#### call_core_plugin(name, method, params)
+
+High-level API for calling plugin methods via JSON-RPC.
+
+**JSON-RPC Format:**
+```json
+{"jsonrpc":"2.0","id":"uuid","method":"method_name","params":{...}}
+```
+
+#### Timeout Handling
+
+- Default timeout: 30 seconds
+- Configurable via `PLUGIN_CALL_TIMEOUT_MS` environment variable
+- Timeout cancels the call and returns an error
+
+#### Restart Policy
+
+Plugins can automatically restart on crash with exponential backoff:
+- Max 3 retries
+- Delay: 200ms * 2^retry_count
+
+### Testing
+
+See `src-tauri/src/plugins/mod.rs` for unit tests covering:
+- Spawn and shutdown lifecycle
+- Double spawn prevention
+- JSON-RPC communication
+- Timeout handling
+
 ## Permissions model (Core)
 - Envelope: JSON-RPC 2.0 `{jsonrpc,id,method,params}`.
 - Host checks (subset):
@@ -35,7 +100,7 @@ This guide explains the UI/Core plugin model, permissions, and demos.
 - HEADLESS mode supported by setting `HEADLESS=1`.
 
 ## Sample plugin
-- `plugins/echo-core/echo.js` — minimal Node echo over JSON-RPC, used by demos.
+- `plugins/echo-core/echo.cjs` — minimal Node echo over JSON-RPC, used by demos.
 
 ### UI Plugin example (TypeScript)
 ```ts

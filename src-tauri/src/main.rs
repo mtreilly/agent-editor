@@ -7,6 +7,7 @@ mod scan;
 mod graph;
 mod secrets;
 mod ai;
+mod plugins;
 
 use std::path::PathBuf;
 use tauri::Manager;

@@ -98,7 +98,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
                     .to_string_lossy()
                     .to_string()
             });
-            let mut conn = db.0.lock();
+            let conn = db.0.lock();
             conn.execute(
                 "INSERT OR IGNORE INTO repo(id,name,path,settings) VALUES(?,?,?,json('{}'))",
                 params![id, name, p.path],
@@ -108,7 +108,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             Ok(serde_json::json!({"repo_id": id}))
         }
         "repos_list" => {
-            let mut conn = db.0.lock();
+            let conn = db.0.lock();
             let mut stmt = conn
                 .prepare("SELECT id,name,path FROM repo ORDER BY created_at DESC")
                 .map_err(|e| e.to_string())?;
@@ -126,7 +126,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             }
             let p: P = serde_json::from_value(req.params.unwrap_or_default())
                 .map_err(|e| e.to_string())?;
-            let mut conn = db.0.lock();
+            let conn = db.0.lock();
             let mut stmt = conn.prepare("SELECT id,name,path,settings,created_at,updated_at FROM repo WHERE id=?1 OR name=?1")
                 .map_err(|e| e.to_string())?;
             let mut rows = stmt
@@ -153,7 +153,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             }
             let p: P = serde_json::from_value(req.params.unwrap_or_default())
                 .map_err(|e| e.to_string())?;
-            let mut conn = db.0.lock();
+            let conn = db.0.lock();
             let n = conn
                 .execute(
                     "DELETE FROM repo WHERE id=?1 OR name=?1",
@@ -175,7 +175,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             let job_id = Uuid::new_v4().to_string();
             // ensure repo row
             let repo_id = {
-                let mut conn = db.0.lock();
+                let conn = db.0.lock();
                 let repo_id: Option<String> = conn
                     .query_row(
                         "SELECT id FROM repo WHERE path=?1 OR name=?1",
@@ -223,7 +223,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             // run scan once (watching not supported in RPC sidecar)
             let stats = crate::scan::scan_once(&db, &p.repo_path, &include, &exclude)
                 .map_err(|e| e.to_string())?;
-            let mut conn = db.0.lock();
+            let conn = db.0.lock();
             conn.execute("UPDATE scan_job SET status='success', stats=?2, finished_at=datetime('now') WHERE id=?1", params![&job_id, serde_json::to_string(&serde_json::json!({"files_scanned": stats.files_scanned, "docs_added": stats.docs_added, "errors": stats.errors})).unwrap()]).map_err(|e| e.to_string())?;
             Ok(
                 serde_json::json!({"job_id": job_id, "files_scanned": stats.files_scanned, "docs_added": stats.docs_added, "errors": stats.errors}),
@@ -534,7 +534,7 @@ async fn route(req: RpcReq, db: Arc<Db>) -> Result<serde_json::Value, String> {
             }
             let p: P = serde_json::from_value(req.params.unwrap_or_default())
                 .map_err(|e| e.to_string())?;
-            let mut conn = db.0.lock();
+            let conn = db.0.lock();
             let n = conn
                 .execute(
                     "DELETE FROM provenance WHERE entity_type='anchor' AND entity_id=?1",

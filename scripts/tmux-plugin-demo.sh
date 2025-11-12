@@ -17,7 +17,7 @@ tmux send-keys -t "$SESSION":0.0 'cd src-tauri && cargo run --bin rpc_sidecar' C
 
 # Pane 1: CLI build and start core echo plugin
 tmux split-window -h -t "$SESSION":0.0
-tmux send-keys -t "$SESSION":0.1 'cd cli && go build -o agent-editor ./cmd/agent-editor && cd .. && ./cli/agent-editor plugin start-core echo --exec node -- plugins/echo-core/echo.js' C-m
+tmux send-keys -t "$SESSION":0.1 'cd cli && go build -o agent-editor ./cmd/agent-editor && cd .. && ./cli/agent-editor plugin start-core echo --exec node -- plugins/echo-core/echo.cjs' C-m
 sleep 1
 tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin call-core echo '{\"msg\":\"hello\"}'" C-m
 

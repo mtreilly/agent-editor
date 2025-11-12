@@ -7,12 +7,18 @@
 mod db;
 #[path = "../api.rs"]
 mod api;
-#[path = "../commands.rs"]
+#[path = "../commands/mod.rs"]
 mod commands;
 #[path = "../scan/mod.rs"]
 mod scan;
 #[path = "../graph/mod.rs"]
 mod graph;
+#[path = "../secrets.rs"]
+mod secrets;
+#[path = "../ai/mod.rs"]
+mod ai;
+#[path = "../plugins/mod.rs"]
+mod plugins;
 
 use std::env;
 use std::path::PathBuf;

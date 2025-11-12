@@ -674,7 +674,7 @@ Exit Criteria
 - CLI parity: repo update/export, plugin events tail.
 
 ### Core Plugin Demo
-- Added a simple echo-core Node plugin under `plugins/echo-core/echo.js` for local demos.
+- Added a simple echo-core Node plugin under `plugins/echo-core/echo.cjs` for local demos.
 - tmux demos:
   - RPC/FS: `pnpm tmux:plugin-rpc-demo`
   - Net domains: `pnpm tmux:plugin-net-demo`

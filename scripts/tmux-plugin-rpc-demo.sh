@@ -19,7 +19,7 @@ tmux split-window -h -t "$SESSION":0.0
 tmux send-keys -t "$SESSION":0.1 'cd cli && go build -o agent-editor ./cmd/agent-editor && cd ..' C-m
 tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin perms set echo --json '{\"core\":{\"call\":true}}'" C-m
 tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin enable echo" C-m
-tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin start-core echo --exec node -- plugins/echo-core/echo.js" C-m
+tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin start-core echo --exec node -- plugins/echo-core/echo.cjs" C-m
 sleep 1
 tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin call-core echo '{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"fs.read\",\"params\":{\"path\":\"README.md\"}}'" C-m
 tmux send-keys -t "$SESSION":0.1 "./cli/agent-editor plugin perms set echo --json '{\"core\":{\"call\":true},\"fs\":{\"read\":true,\"roots\":[\".\"]}}'" C-m

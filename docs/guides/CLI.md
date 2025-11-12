@@ -38,7 +38,7 @@ agent-editor settings default-provider set openrouter
 
 # Plugins (Core)
 agent-editor plugin core-list -o json
-agent-editor plugin start-core echo --exec node -- plugins/echo-core/echo.js
+agent-editor plugin start-core echo --exec node -- plugins/echo-core/echo.cjs
 agent-editor plugin call-core echo '{"jsonrpc":"2.0","id":"1","method":"fs.read","params":{"path":"README.md"}}'
 agent-editor plugin stop-core echo
 
